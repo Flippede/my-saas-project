@@ -1,0 +1,16 @@
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/.env*
+frontend/*.log
+frontend/*.tsbuildinfo
+
+backend/__pycache__/
+backend/.env*
+backend/*.log
+backend/*.db
+
+**/.cursor/
+.DS_Store
+Thumbs.db
