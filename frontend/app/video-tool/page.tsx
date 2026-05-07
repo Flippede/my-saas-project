@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { buildApiUrl } from "@/lib/app-config"
 
 type StoryboardScene = {
   scene: number
@@ -60,7 +61,7 @@ export default function VideoToolPage() {
 
     setLoading(true)
     try {
-      const response = await fetch("/api/v1/tools", {
+      const response = await fetch(buildApiUrl("/api/v1/tools"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
