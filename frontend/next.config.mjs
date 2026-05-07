@@ -2,6 +2,10 @@ const backendProxyTarget = process.env.BACKEND_PROXY_TARGET || "http://127.0.0.1
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "export",
+  images: {
+    unoptimized: true,
+  },
   async rewrites() {
     return [
       {
