@@ -104,7 +104,7 @@ export function Pricing({
                 delay: 0.15 + idx * 0.12,
               }}
               className={cn(
-                "relative rounded-2xl p-6 backdrop-blur-md text-center flex flex-col",
+                "relative rounded-2xl p-6 text-center flex flex-col",
                 tier.popular
                   ? "border-2 border-blue-400 bg-white/10 shadow-xl z-10"
                   : "border border-white/15 bg-white/5",

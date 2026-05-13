@@ -156,7 +156,7 @@ export default function HomePage() {
             <BentoCard
               name="AI 引流脚本生成器"
               className="lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
+              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
               Icon={Bot}
               description="AI 自动生成引导文案：覆盖问答、线索筛选与私域转化话术，24/7 可投放。"
               href="#"
@@ -165,7 +165,7 @@ export default function HomePage() {
             <BentoCard
               name="自动裂变脚本流程"
               className="lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
+              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
               Icon={Workflow}
               description="把爆款脚本拆解成可复制流程，减少人工重复编辑，平均每周省 20+ 小时。"
               href="#"
@@ -174,7 +174,7 @@ export default function HomePage() {
             <BentoCard
               name="私域对接即用"
               className="lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
+              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
               Icon={Cog}
               description="无需开发对接：把 AI 能力直接嵌入你的裂变节奏，适配常见业务场景。"
               href="#"
@@ -183,7 +183,7 @@ export default function HomePage() {
             <BentoCard
               name="爆款洞察与优化建议"
               className="lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
+              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
               Icon={Brain}
               description="提供可执行建议：帮你调整标题、开场、节奏与转化点，提升转化率。"
               href="#"
@@ -192,7 +192,7 @@ export default function HomePage() {
             <BentoCard
               name="定制私域裂变方案"
               className="lg:col-start-3 lg:col-end-3 lg:row-start-2 lg:row-end-4"
-              background={<div className="absolute inset-0 bg-black/80 backdrop-blur-sm border border-white/10" />}
+              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
               Icon={MessageSquare}
               description="按你的业务需求定制裂变脚本模板，从灵感到落地一条龙。"
               href="#"
@@ -210,7 +210,7 @@ export default function HomePage() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="bg-black/80 backdrop-blur-sm border-white/10">
+            <Card className="bg-black/80 border-white/10">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex text-yellow-400">{"★".repeat(5)}</div>
@@ -225,7 +225,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-black/80 backdrop-blur-sm border-white/10">
+            <Card className="bg-black/80 border-white/10">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex text-yellow-400">{"★".repeat(5)}</div>
@@ -240,7 +240,7 @@ export default function HomePage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-black/80 backdrop-blur-sm border-white/10">
+            <Card className="bg-black/80 border-white/10">
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="flex text-yellow-400">{"★".repeat(5)}</div>

@@ -1,5 +1,5 @@
 "use client"
-import { useId } from "react"
+import { useId, useRef } from "react"
 import { useEffect, useState } from "react"
 import Particles, { initParticlesEngine } from "@tsparticles/react"
 import type { Container, SingleOrMultiple } from "@tsparticles/engine"
@@ -20,14 +20,35 @@ type ParticlesProps = {
 }
 export const SparklesCore = (props: ParticlesProps) => {
   const { id, className, background, minSize, maxSize, speed, particleColor, particleDensity } = props
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
   const [init, setInit] = useState(false)
+  const [isInView, setIsInView] = useState(false)
+
   useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting)
+      },
+      { rootMargin: "80px 0px", threshold: 0.01 },
+    )
+
+    observer.observe(wrapper)
+
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!isInView || init) return
+
     initParticlesEngine(async (engine) => {
       await loadSlim(engine)
     }).then(() => {
       setInit(true)
     })
-  }, [])
+  }, [init, isInView])
   const controls = useAnimation()
 
   const particlesLoaded = async (container?: Container) => {
@@ -43,8 +64,8 @@ export const SparklesCore = (props: ParticlesProps) => {
 
   const generatedId = useId()
   return (
-    <motion.div animate={controls} className={cn("opacity-0", className)}>
-      {init && (
+    <motion.div ref={wrapperRef} animate={controls} className={cn("opacity-0", className)}>
+      {init && isInView && (
         <Particles
           id={id || generatedId}
           className={cn("h-full w-full")}
@@ -60,7 +81,7 @@ export const SparklesCore = (props: ParticlesProps) => {
               zIndex: 1,
             },
 
-            fpsLimit: 120,
+            fpsLimit: 30,
             interactivity: {
               events: {
                 onClick: {

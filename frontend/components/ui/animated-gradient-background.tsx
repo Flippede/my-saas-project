@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion"
 import type React from "react"
-import { useEffect, useRef } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 interface AnimatedGradientBackgroundProps {
   /**
@@ -95,34 +95,68 @@ const AnimatedGradientBackground: React.FC<AnimatedGradientBackgroundProps> = ({
   }
 
   const containerRef = useRef<HTMLDivElement | null>(null)
+  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const [isInView, setIsInView] = useState(false)
+  const gradientStopsString = useMemo(
+    () => gradientStops.map((stop, index) => `${gradientColors[index]} ${stop}%`).join(", "),
+    [gradientColors, gradientStops],
+  )
 
   useEffect(() => {
+    const wrapper = wrapperRef.current
+    if (!wrapper) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting)
+      },
+      { rootMargin: "80px 0px", threshold: 0.01 },
+    )
+
+    observer.observe(wrapper)
+
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const setGradient = (width: number) => {
+      if (containerRef.current) {
+        containerRef.current.style.background = `radial-gradient(${width}% ${
+          width + topOffset
+        }% at 50% 20%, ${gradientStopsString})`
+      }
+    }
+
+    if (!Breathing || !isInView || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setGradient(startingGap)
+      return
+    }
+
     let animationFrame: number
+    let lastFrameAt = 0
     let width = startingGap
     let directionWidth = 1
 
-    const animateGradient = () => {
+    const animateGradient = (now: number) => {
+      if (now - lastFrameAt < 33) {
+        animationFrame = requestAnimationFrame(animateGradient)
+        return
+      }
+      lastFrameAt = now
+
       if (width >= startingGap + breathingRange) directionWidth = -1
       if (width <= startingGap - breathingRange) directionWidth = 1
 
-      if (!Breathing) directionWidth = 0
       width += directionWidth * animationSpeed
-
-      const gradientStopsString = gradientStops.map((stop, index) => `${gradientColors[index]} ${stop}%`).join(", ")
-
-      const gradient = `radial-gradient(${width}% ${width + topOffset}% at 50% 20%, ${gradientStopsString})`
-
-      if (containerRef.current) {
-        containerRef.current.style.background = gradient
-      }
+      setGradient(width)
 
       animationFrame = requestAnimationFrame(animateGradient)
     }
 
     animationFrame = requestAnimationFrame(animateGradient)
 
-    return () => cancelAnimationFrame(animationFrame) // Cleanup animation
-  }, [startingGap, Breathing, gradientColors, gradientStops, animationSpeed, breathingRange, topOffset])
+    return () => cancelAnimationFrame(animationFrame)
+  }, [startingGap, Breathing, animationSpeed, breathingRange, topOffset, gradientStopsString, isInView])
 
   return (
     <motion.div
@@ -139,6 +173,7 @@ const AnimatedGradientBackground: React.FC<AnimatedGradientBackgroundProps> = ({
           ease: [0.25, 0.1, 0.25, 1], // Cubic bezier easing
         },
       }}
+      ref={wrapperRef}
       className={`absolute inset-0 overflow-hidden ${containerClassName}`}
     >
       <div ref={containerRef} style={containerStyle} className="absolute inset-0 transition-transform" />
