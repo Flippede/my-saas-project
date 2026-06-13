@@ -18,6 +18,14 @@ export type AIGameProject = {
   status: string
   created_at: string
   updated_at: string
+  asset_counts?: {
+    total: number
+    pending: number
+    generated: number
+    uploaded: number
+    failed: number
+    by_status?: Record<string, number>
+  }
 }
 
 export type GeneratedGameWorld = {

@@ -153,6 +153,24 @@ export default function DashboardPage() {
     [aiProjects.length, submissions.length],
   )
 
+  const aiAssetSummary = useMemo(
+    () =>
+      aiProjects.reduce(
+        (summary, project) => {
+          const counts = project.asset_counts
+          summary.total += counts?.total || 0
+          summary.pending += counts?.pending || 0
+          summary.generated += counts?.generated || 0
+          summary.uploaded += counts?.uploaded || 0
+          return summary
+        },
+        { total: 0, pending: 0, generated: 0, uploaded: 0 },
+      ),
+    [aiProjects],
+  )
+
+  const latestAiProject = aiProjects[0]
+
   return (
     <div className="min-h-screen bg-[#050608] text-white">
       <Navbar />
@@ -242,6 +260,26 @@ export default function DashboardPage() {
               </Button>
             </div>
 
+            <div className="mb-6 grid gap-3 md:grid-cols-4">
+              {[
+                { label: "项目数量", value: aiProjects.length },
+                { label: "待生成资产", value: aiAssetSummary.pending },
+                { label: "已生成资产", value: aiAssetSummary.generated },
+                { label: "已上传资产", value: aiAssetSummary.uploaded },
+              ].map((item) => (
+                <div key={item.label} className="rounded-lg border border-white/10 bg-black/25 p-4">
+                  <div className="text-xs text-neutral-500">{item.label}</div>
+                  <div className="mt-2 text-2xl font-semibold">{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {latestAiProject ? (
+              <div className="mb-6 rounded-lg border border-cyan-200/20 bg-cyan-200/[0.06] p-4 text-sm leading-7 text-cyan-50">
+                最近项目：{latestAiProject.title || "未命名 AI 游戏项目"}，资产任务共 {latestAiProject.asset_counts?.total || 0} 个。
+              </div>
+            ) : null}
+
             {loadingAiProjects ? (
               <div className="rounded-lg border border-white/10 bg-black/25 p-5 text-sm text-neutral-300">正在加载 AI 游戏项目...</div>
             ) : aiProjectsError ? (
@@ -292,6 +330,18 @@ export default function DashboardPage() {
                           </span>
                           <span className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1">
                             平台：{item.target_platform || "未填写"}
+                          </span>
+                          <span className="rounded border border-cyan-200/20 bg-cyan-200/[0.08] px-2.5 py-1 text-cyan-100">
+                            资产：{item.asset_counts?.total ?? 0}
+                          </span>
+                          <span className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1">
+                            待生成：{item.asset_counts?.pending ?? 0}
+                          </span>
+                          <span className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1">
+                            已生成：{item.asset_counts?.generated ?? 0}
+                          </span>
+                          <span className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1">
+                            已上传：{item.asset_counts?.uploaded ?? 0}
                           </span>
                         </div>
                       </div>

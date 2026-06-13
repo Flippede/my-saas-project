@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
+from services.ai_game_asset_planner import plan_assets_from_game_world
 from services.ai_game_generator import generate_game_world, get_ai_game_provider_config, regenerate_game_world_section
 from services.ai_game_providers import ALLOWED_REGENERATE_SECTIONS
 from tools.script_generator import generate_scripts
@@ -395,6 +396,26 @@ def init_db() -> None:
             model_name TEXT,
             status TEXT NOT NULL DEFAULT 'pending',
             error_message TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ai_game_assets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            asset_type TEXT NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT,
+            prompt TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            result_url TEXT,
+            thumbnail_url TEXT,
+            metadata_json TEXT NOT NULL DEFAULT '{}',
+            admin_note TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -791,9 +812,46 @@ class AIGameProjectRegenerateSectionRequest(BaseModel):
     instruction: Optional[str] = ""
 
 
+class AIGameAssetUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    prompt: Optional[str] = None
+    status: Optional[str] = None
+    result_url: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+
+
+class AdminAIGameAssetUpdateRequest(AIGameAssetUpdateRequest):
+    admin_note: Optional[str] = None
+    metadata_json: Optional[dict] = None
+
+
 class AdminGameSubmissionUpdateRequest(BaseModel):
     status: Optional[str] = None
     admin_note: Optional[str] = None
+
+
+ALLOWED_AI_GAME_ASSET_TYPES = {
+    "protagonist",
+    "boss",
+    "scene",
+    "ui_screen",
+    "video_storyboard",
+    "sprite_sheet",
+    "pitch_material",
+    "other",
+}
+
+
+ALLOWED_AI_GAME_ASSET_STATUSES = {
+    "pending",
+    "ready_for_generation",
+    "generating",
+    "generated",
+    "uploaded",
+    "failed",
+    "cancelled",
+}
 
 
 ALLOWED_GAME_SUBMISSION_STATUSES = {
@@ -925,6 +983,59 @@ def _format_ai_game_generation_run(row: Optional[sqlite3.Row]) -> Optional[dict]
         "error_message": row["error_message"] or "",
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
+    }
+
+
+def _format_ai_game_asset(row: sqlite3.Row) -> dict:
+    metadata = _safe_json_loads(row["metadata_json"], {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+    return {
+        "id": row["id"],
+        "project_id": row["project_id"],
+        "user_id": row["user_id"],
+        "asset_type": row["asset_type"] or "other",
+        "title": row["title"] or "",
+        "description": row["description"] or "",
+        "prompt": row["prompt"] or "",
+        "status": row["status"] or "pending",
+        "result_url": row["result_url"] or "",
+        "thumbnail_url": row["thumbnail_url"] or "",
+        "metadata": metadata,
+        "admin_note": row["admin_note"] or "",
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _get_ai_game_asset_counts(project_id: int, user_id: Optional[int] = None) -> dict:
+    conn = get_db_conn()
+    cur = conn.cursor()
+    params: list[Any] = [project_id]
+    where_sql = "WHERE project_id = ?"
+    if user_id is not None:
+        where_sql += " AND user_id = ?"
+        params.append(user_id)
+    cur.execute(
+        f"""
+        SELECT status, COUNT(*) AS count
+        FROM ai_game_assets
+        {where_sql}
+        GROUP BY status
+        """,
+        params,
+    )
+    rows = cur.fetchall()
+    conn.close()
+    by_status = {row["status"] or "pending": int(row["count"]) for row in rows}
+    total = sum(by_status.values())
+    return {
+        "total": total,
+        "pending": by_status.get("pending", 0) + by_status.get("ready_for_generation", 0),
+        "generated": by_status.get("generated", 0),
+        "uploaded": by_status.get("uploaded", 0),
+        "failed": by_status.get("failed", 0),
+        "by_status": by_status,
     }
 
 
@@ -1520,8 +1631,13 @@ async def list_ai_game_projects(token: str = Depends(verify_token_from_header)):
     )
     rows = cur.fetchall()
     conn.close()
+    items = []
+    for row in rows:
+        project = _format_ai_game_project(row)
+        project["asset_counts"] = _get_ai_game_asset_counts(int(row["id"]), user_id)
+        items.append(project)
     return {
-        "items": [_format_ai_game_project(row) for row in rows],
+        "items": items,
     }
 
 
@@ -1554,8 +1670,10 @@ async def get_ai_game_project(project_id: int, token: str = Depends(verify_token
 
     formatted_run = _format_ai_game_generation_run(run_row)
     generation_result = formatted_run["output_json"] if formatted_run and formatted_run.get("output_json") else None
+    formatted_project = _format_ai_game_project(project_row)
+    formatted_project["asset_counts"] = _get_ai_game_asset_counts(project_id, user_id)
     return {
-        "project": _format_ai_game_project(project_row),
+        "project": formatted_project,
         "latest_run": formatted_run,
         "generation_result": generation_result,
     }
@@ -1703,11 +1821,278 @@ async def regenerate_ai_game_project_section(
         raise HTTPException(status_code=500, detail="AI 模块重新生成失败，请稍后重试") from exc
 
     formatted_run = _format_ai_game_generation_run(refreshed_run)
+    formatted_project = _format_ai_game_project(refreshed_project)
+    formatted_project["asset_counts"] = _get_ai_game_asset_counts(project_id, user_id)
     return {
-        "project": _format_ai_game_project(refreshed_project),
+        "project": formatted_project,
         "latest_run": formatted_run,
         "generation_result": updated_output,
     }
+
+
+@app.post("/api/v1/ai-game-projects/{project_id}/plan-assets")
+async def plan_ai_game_project_assets(project_id: int, token: str = Depends(verify_token_from_header)):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM ai_game_projects WHERE id = ? AND user_id = ?", (project_id, user_id))
+    project_row = cur.fetchone()
+    if not project_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="AI 游戏项目不存在")
+
+    cur.execute(
+        """
+        SELECT *
+        FROM ai_game_generation_runs
+        WHERE project_id = ? AND user_id = ? AND status = 'success'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (project_id, user_id),
+    )
+    run_row = cur.fetchone()
+    if not run_row:
+        conn.close()
+        raise HTTPException(status_code=400, detail="当前项目暂无可拆解的成功生成结果")
+
+    output_json = _safe_json_loads(run_row["output_json"], {})
+    if not isinstance(output_json, dict) or not output_json:
+        conn.close()
+        raise HTTPException(status_code=400, detail="当前项目生成结果为空，无法拆解资产任务")
+
+    planned_assets = plan_assets_from_game_world(project_id, user_id, output_json)
+    now = now_utc().isoformat()
+    created_count = 0
+    for asset in planned_assets:
+        cur.execute(
+            """
+            SELECT id
+            FROM ai_game_assets
+            WHERE project_id = ? AND user_id = ? AND asset_type = ? AND title = ? AND prompt = ?
+            LIMIT 1
+            """,
+            (
+                project_id,
+                user_id,
+                asset["asset_type"],
+                asset["title"],
+                asset["prompt"],
+            ),
+        )
+        if cur.fetchone():
+            continue
+
+        cur.execute(
+            """
+            INSERT INTO ai_game_assets (
+                project_id, user_id, asset_type, title, description, prompt,
+                status, result_url, thumbnail_url, metadata_json, admin_note,
+                created_at, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, '', '', ?, '', ?, ?)
+            """,
+            (
+                project_id,
+                user_id,
+                asset["asset_type"],
+                asset["title"],
+                asset["description"],
+                asset["prompt"],
+                asset["status"],
+                asset["metadata_json"],
+                now,
+                now,
+            ),
+        )
+        created_count += 1
+
+    conn.commit()
+    cur.execute(
+        """
+        SELECT *
+        FROM ai_game_assets
+        WHERE project_id = ? AND user_id = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (project_id, user_id),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return {
+        "items": [_format_ai_game_asset(row) for row in rows],
+        "created_count": created_count,
+    }
+
+
+@app.get("/api/v1/ai-game-projects/{project_id}/assets")
+async def get_ai_game_project_assets(project_id: int, token: str = Depends(verify_token_from_header)):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM ai_game_projects WHERE id = ? AND user_id = ?", (project_id, user_id))
+    if not cur.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="AI 游戏项目不存在")
+
+    cur.execute(
+        """
+        SELECT *
+        FROM ai_game_assets
+        WHERE project_id = ? AND user_id = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (project_id, user_id),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return {
+        "items": [_format_ai_game_asset(row) for row in rows],
+    }
+
+
+def _build_ai_game_asset_update(body: AIGameAssetUpdateRequest, admin_update: bool = False) -> tuple[list[str], list[Any]]:
+    updates: list[str] = []
+    params: list[Any] = []
+
+    text_fields = ["title", "description", "prompt", "result_url", "thumbnail_url"]
+    for field in text_fields:
+        value = getattr(body, field, None)
+        if value is not None:
+            updates.append(f"{field} = ?")
+            params.append(_clean_text(value))
+
+    if body.status is not None:
+        status = _clean_text(body.status)
+        if status not in ALLOWED_AI_GAME_ASSET_STATUSES:
+            raise HTTPException(status_code=400, detail="无效的资产状态")
+        updates.append("status = ?")
+        params.append(status)
+
+    if admin_update and isinstance(body, AdminAIGameAssetUpdateRequest):
+        if body.admin_note is not None:
+            updates.append("admin_note = ?")
+            params.append(_clean_text(body.admin_note))
+        if body.metadata_json is not None:
+            updates.append("metadata_json = ?")
+            params.append(json.dumps(body.metadata_json, ensure_ascii=False))
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="没有可更新的字段")
+
+    updates.append("updated_at = ?")
+    params.append(now_utc().isoformat())
+    return updates, params
+
+
+@app.patch("/api/v1/ai-game-assets/{asset_id}")
+async def update_ai_game_asset(
+    asset_id: int,
+    body: AIGameAssetUpdateRequest,
+    token: str = Depends(verify_token_from_header),
+):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    updates, params = _build_ai_game_asset_update(body, admin_update=False)
+    params.extend([asset_id, user_id])
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM ai_game_assets WHERE id = ? AND user_id = ?", (asset_id, user_id))
+    if not cur.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="资产不存在")
+
+    cur.execute(
+        f"UPDATE ai_game_assets SET {', '.join(updates)} WHERE id = ? AND user_id = ?",
+        params,
+    )
+    conn.commit()
+    cur.execute("SELECT * FROM ai_game_assets WHERE id = ? AND user_id = ?", (asset_id, user_id))
+    row = cur.fetchone()
+    conn.close()
+    return _format_ai_game_asset(row)
+
+
+@app.get("/api/v1/admin/ai-game-assets")
+async def admin_list_ai_game_assets(
+    status: Optional[str] = None,
+    project_id: Optional[int] = None,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    _admin: dict = Depends(require_admin_token),
+):
+    where_clauses = []
+    params: list[Any] = []
+    normalized_status = _clean_text(status)
+    if normalized_status:
+        if normalized_status not in ALLOWED_AI_GAME_ASSET_STATUSES:
+            raise HTTPException(status_code=400, detail="无效的资产状态")
+        where_clauses.append("status = ?")
+        params.append(normalized_status)
+    if project_id is not None:
+        where_clauses.append("project_id = ?")
+        params.append(project_id)
+
+    where_sql = "WHERE " + " AND ".join(where_clauses) if where_clauses else ""
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(f"SELECT COUNT(*) AS total FROM ai_game_assets {where_sql}", params)
+    total_row = cur.fetchone()
+    total = int(total_row["total"] if total_row else 0)
+    cur.execute(
+        f"""
+        SELECT *
+        FROM ai_game_assets
+        {where_sql}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ? OFFSET ?
+        """,
+        [*params, limit, offset],
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return {
+        "items": [_format_ai_game_asset(row) for row in rows],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@app.patch("/api/v1/admin/ai-game-assets/{asset_id}")
+async def admin_update_ai_game_asset(
+    asset_id: int,
+    body: AdminAIGameAssetUpdateRequest,
+    _admin: dict = Depends(require_admin_token),
+):
+    updates, params = _build_ai_game_asset_update(body, admin_update=True)
+    params.append(asset_id)
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM ai_game_assets WHERE id = ?", (asset_id,))
+    if not cur.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="资产不存在")
+
+    cur.execute(
+        f"UPDATE ai_game_assets SET {', '.join(updates)} WHERE id = ?",
+        params,
+    )
+    conn.commit()
+    cur.execute("SELECT * FROM ai_game_assets WHERE id = ?", (asset_id,))
+    row = cur.fetchone()
+    conn.close()
+    return _format_ai_game_asset(row)
 
 
 @app.get("/api/debug/my-openid")

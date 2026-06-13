@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Loader2, RefreshCw } from "lucide-react"
 
+import { AIGameAssetPipeline } from "@/components/ai-game-asset-pipeline"
 import { AIGameWorldResult } from "@/components/ai-game-world-result"
 import { Button } from "@/components/ui/button"
 import { getStoredToken } from "@/lib/app-config"
@@ -167,6 +168,7 @@ export default function GameProjectDetailPage({ params }: { params: { id: string
                   </div>
                 </div>
               </section>
+              <AIGameAssetPipeline projectId={project.id} />
               <AIGameWorldResult result={result} enableRegeneration onRegenerateSection={handleRegenerateSection} />
             </>
           ) : (
