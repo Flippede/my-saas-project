@@ -7,7 +7,13 @@ import { ArrowLeft, Loader2, RefreshCw } from "lucide-react"
 import { AIGameWorldResult } from "@/components/ai-game-world-result"
 import { Button } from "@/components/ui/button"
 import { getStoredToken } from "@/lib/app-config"
-import { getAIGameProject, type AIGameProject, type GeneratedGameWorld } from "@/lib/ai-game-projects"
+import {
+  getAIGameProject,
+  regenerateAIGameProjectSection,
+  type AIGameProject,
+  type AIGameProjectSection,
+  type GeneratedGameWorld,
+} from "@/lib/ai-game-projects"
 
 function formatDate(value?: string) {
   if (!value) {
@@ -32,6 +38,20 @@ export default function GameProjectDetailPage({ params }: { params: { id: string
   const [result, setResult] = useState<GeneratedGameWorld | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+
+  async function handleRegenerateSection(section: AIGameProjectSection, instruction: string) {
+    const token = getStoredToken()
+    if (!token) {
+      throw new Error("请先登录后再重新生成模块。")
+    }
+    if (!Number.isFinite(projectId) || projectId <= 0) {
+      throw new Error("项目编号无效。")
+    }
+
+    const data = await regenerateAIGameProjectSection(projectId, section, instruction, token)
+    setProject(data.project)
+    setResult(data.generation_result || null)
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -135,7 +155,7 @@ export default function GameProjectDetailPage({ params }: { params: { id: string
               <section className="mb-6 rounded-lg border border-white/10 bg-black/25 p-5">
                 <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
                   <div>
-                    <p className="text-sm uppercase tracking-[0.22em] text-cyan-200">AI Game Project</p>
+                    <p className="text-sm uppercase tracking-[0.22em] text-cyan-200">Game World Workbench</p>
                     <h1 className="mt-2 text-3xl font-semibold tracking-normal md:text-5xl">{project.title || "未命名 AI 游戏项目"}</h1>
                     <p className="mt-4 max-w-3xl text-sm leading-7 text-neutral-300">{project.one_sentence_idea}</p>
                   </div>
@@ -147,7 +167,7 @@ export default function GameProjectDetailPage({ params }: { params: { id: string
                   </div>
                 </div>
               </section>
-              <AIGameWorldResult result={result} />
+              <AIGameWorldResult result={result} enableRegeneration onRegenerateSection={handleRegenerateSection} />
             </>
           ) : (
             <div className="rounded-lg border border-white/10 bg-white/[0.045] p-6 text-neutral-300">项目暂无生成结果。</div>

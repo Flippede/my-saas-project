@@ -23,7 +23,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
-from services.ai_game_generator import generate_game_world, get_ai_game_provider_config
+from services.ai_game_generator import generate_game_world, get_ai_game_provider_config, regenerate_game_world_section
+from services.ai_game_providers import ALLOWED_REGENERATE_SECTIONS
 from tools.script_generator import generate_scripts
 from tools.video_storyboard import generate_storyboard
 
@@ -783,6 +784,11 @@ class AIGameProjectCreateRequest(BaseModel):
     game_type: Optional[str] = ""
     art_style: Optional[str] = ""
     target_platform: Optional[str] = ""
+
+
+class AIGameProjectRegenerateSectionRequest(BaseModel):
+    section: str = Field(min_length=1, max_length=80)
+    instruction: Optional[str] = ""
 
 
 class AdminGameSubmissionUpdateRequest(BaseModel):
@@ -1552,6 +1558,155 @@ async def get_ai_game_project(project_id: int, token: str = Depends(verify_token
         "project": _format_ai_game_project(project_row),
         "latest_run": formatted_run,
         "generation_result": generation_result,
+    }
+
+
+@app.post("/api/v1/ai-game-projects/{project_id}/regenerate-section")
+async def regenerate_ai_game_project_section(
+    project_id: int,
+    body: AIGameProjectRegenerateSectionRequest,
+    token: str = Depends(verify_token_from_header),
+):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    section = _clean_text(body.section)
+    instruction = _clean_text(body.instruction)
+    if section not in ALLOWED_REGENERATE_SECTIONS:
+        raise HTTPException(status_code=400, detail="不支持重新生成该模块")
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM ai_game_projects WHERE id = ? AND user_id = ?", (project_id, user_id))
+    project_row = cur.fetchone()
+    if not project_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="AI 游戏项目不存在")
+
+    cur.execute(
+        """
+        SELECT *
+        FROM ai_game_generation_runs
+        WHERE project_id = ? AND user_id = ? AND status = 'success'
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (project_id, user_id),
+    )
+    latest_success_run = cur.fetchone()
+    if not latest_success_run:
+        conn.close()
+        raise HTTPException(status_code=400, detail="当前项目暂无可重新生成的成功结果")
+
+    current_output = _safe_json_loads(latest_success_run["output_json"], {})
+    if not isinstance(current_output, dict) or not current_output:
+        conn.close()
+        raise HTTPException(status_code=400, detail="当前项目生成结果为空，无法重新生成模块")
+
+    original_input = _safe_json_loads(latest_success_run["input_json"], {})
+    if not isinstance(original_input, dict) or not original_input.get("idea"):
+        original_input = {
+            "idea": project_row["one_sentence_idea"] or "",
+            "game_type": project_row["game_type"] or "",
+            "art_style": project_row["art_style"] or "",
+            "target_platform": project_row["target_platform"] or "",
+        }
+
+    now = now_utc().isoformat()
+    provider_config = get_ai_game_provider_config()
+    run_input = {
+        "action": "regenerate_section",
+        "section": section,
+        "instruction": instruction,
+        "project_input": original_input,
+        "source_run_id": latest_success_run["id"],
+    }
+    cur.execute(
+        """
+        INSERT INTO ai_game_generation_runs (
+            project_id, user_id, input_json, output_json, provider,
+            model_name, status, error_message, created_at, updated_at
+        )
+        VALUES (?, ?, ?, '{}', ?, ?, 'running', '', ?, ?)
+        """,
+        (
+            project_id,
+            user_id,
+            json.dumps(run_input, ensure_ascii=False),
+            provider_config["provider"],
+            provider_config["model_name"],
+            now,
+            now,
+        ),
+    )
+    run_id = int(cur.lastrowid)
+    conn.commit()
+    conn.close()
+
+    try:
+        updated_output = regenerate_game_world_section(original_input, current_output, section, instruction)
+        title = _clean_text(updated_output.get("title")) or project_row["title"] or project_row["one_sentence_idea"][:40]
+        finished_at = now_utc().isoformat()
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE ai_game_projects
+            SET title = ?, status = 'generated', updated_at = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (title, finished_at, project_id, user_id),
+        )
+        cur.execute(
+            """
+            UPDATE ai_game_generation_runs
+            SET output_json = ?, status = 'success', error_message = '', updated_at = ?
+            WHERE id = ? AND project_id = ? AND user_id = ?
+            """,
+            (
+                json.dumps(updated_output, ensure_ascii=False),
+                finished_at,
+                run_id,
+                project_id,
+                user_id,
+            ),
+        )
+        conn.commit()
+        cur.execute("SELECT * FROM ai_game_projects WHERE id = ? AND user_id = ?", (project_id, user_id))
+        refreshed_project = cur.fetchone()
+        cur.execute("SELECT * FROM ai_game_generation_runs WHERE id = ? AND user_id = ?", (run_id, user_id))
+        refreshed_run = cur.fetchone()
+        conn.close()
+    except Exception as exc:
+        failed_at = now_utc().isoformat()
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE ai_game_generation_runs
+            SET status = 'failed', error_message = ?, updated_at = ?
+            WHERE id = ? AND project_id = ? AND user_id = ?
+            """,
+            (str(exc), failed_at, run_id, project_id, user_id),
+        )
+        cur.execute(
+            """
+            UPDATE ai_game_projects
+            SET status = 'generated', updated_at = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (failed_at, project_id, user_id),
+        )
+        conn.commit()
+        conn.close()
+        raise HTTPException(status_code=500, detail="AI 模块重新生成失败，请稍后重试") from exc
+
+    formatted_run = _format_ai_game_generation_run(refreshed_run)
+    return {
+        "project": _format_ai_game_project(refreshed_project),
+        "latest_run": formatted_run,
+        "generation_result": updated_output,
     }
 
 

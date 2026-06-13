@@ -78,18 +78,18 @@ export default function GenerateGamePage() {
             <div>
               <p className="inline-flex items-center gap-2 rounded-full border border-cyan-200/25 bg-cyan-200/10 px-3 py-1 text-sm text-cyan-100">
                 <WandSparkles className="h-4 w-4" />
-                造境 AI 核心生成引擎 v1
+                造境 AI 核心生成引擎 v2
               </p>
-              <h1 className="mt-5 text-4xl font-semibold tracking-normal md:text-6xl">一句话生成你的游戏世界</h1>
+              <h1 className="mt-5 text-4xl font-semibold tracking-normal md:text-6xl">生成游戏世界方案</h1>
               <p className="mt-5 max-w-2xl text-lg leading-8 text-neutral-300">
-                输入一个核心想法，生成世界观、玩法、角色、Boss、场景、UI 截图方案、素材 Prompt 和 Pitch Deck 初稿。
+                输入一个核心想法，生成世界观、玩法、角色、Boss、场景、UI 页面、视频分镜、素材 Prompt 和 Pitch 初稿。
               </p>
 
               {project ? (
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Button asChild className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
                     <Link href={`/game-projects/${project.id}`}>
-                      查看项目详情
+                      进入项目工作台
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -136,15 +136,15 @@ export default function GenerateGamePage() {
                   className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4" />}
-                  {loading ? "生成中..." : "生成游戏世界"}
+                  {loading ? "生成中..." : "生成游戏世界方案"}
                 </Button>
                 <Button
                   asChild
                   size="lg"
                   variant="outline"
-                  className="rounded-md border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                  className="h-auto whitespace-normal rounded-md border-white/15 bg-transparent py-3 text-left text-white hover:bg-white/10 hover:text-white"
                 >
-                  <Link href="/submit">提交人工需求</Link>
+                  <Link href="/submit">需要宣传片、素材包或可交互 Demo？提交定制需求</Link>
                 </Button>
               </div>
             </form>

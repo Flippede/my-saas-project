@@ -1,4 +1,4 @@
-import { buildApiUrl, jsonHeaders } from "@/lib/app-config"
+import { buildApiUrl, getStoredToken, jsonHeaders } from "@/lib/app-config"
 
 export type AIGameProjectPayload = {
   idea: string
@@ -23,8 +23,26 @@ export type AIGameProject = {
 export type GeneratedGameWorld = {
   title: string
   one_sentence_pitch: string
-  worldview: string
-  core_gameplay: string
+  genre?: string
+  target_player?: string
+  worldview:
+    | string
+    | {
+        summary: string
+        setting: string
+        conflict: string
+        factions: string[]
+        tone_keywords: string[]
+      }
+  core_gameplay:
+    | string
+    | {
+        summary: string
+        loop: string
+        combat: string
+        progression: string
+        unique_hook: string
+      }
   player_fantasy: string
   protagonist: {
     name: string
@@ -32,12 +50,14 @@ export type GeneratedGameWorld = {
     appearance: string
     personality: string
     abilities: string[]
+    visual_prompt?: string
   }
   bosses: Array<{
     name: string
     concept: string
     visual_style: string
     mechanics: string[]
+    visual_prompt?: string
   }>
   scenes: Array<{
     name: string
@@ -51,6 +71,15 @@ export type GeneratedGameWorld = {
     layout_description: string
     image_prompt: string
   }>
+  video_storyboard?: Array<{
+    shot: number
+    duration: string
+    camera: string
+    visual: string
+    action: string
+    caption: string
+    video_prompt: string
+  }>
   asset_prompts: {
     character_concept_art: string[]
     environment_concept_art: string[]
@@ -59,7 +88,9 @@ export type GeneratedGameWorld = {
     video_storyboard: string[]
   }
   pitch_deck_outline: string[]
-  next_steps: string[]
+  monetization_angle?: string
+  development_next_steps?: string[]
+  next_steps?: string[]
   source_input?: {
     idea: string
     game_type: string
@@ -102,6 +133,19 @@ export type AIGameProjectDetail = ApiMessage & {
   latest_run?: AIGameGenerationRun | null
   generation_result?: GeneratedGameWorld | null
 }
+
+export type AIGameProjectSection =
+  | "worldview"
+  | "core_gameplay"
+  | "protagonist"
+  | "bosses"
+  | "scenes"
+  | "ui_screens"
+  | "video_storyboard"
+  | "asset_prompts"
+  | "pitch_deck_outline"
+  | "development_next_steps"
+  | "next_steps"
 
 async function readJsonResponse<T extends ApiMessage>(response: Response): Promise<T> {
   try {
@@ -162,6 +206,35 @@ export async function getAIGameProject(token: string, id: number): Promise<Requi
 
   if (!response.ok) {
     throw new Error(data.detail || data.message || "获取 AI 游戏项目详情失败。")
+  }
+  if (!data.project) {
+    throw new Error("项目详情结构不完整。")
+  }
+
+  return {
+    ...data,
+    project: data.project,
+  }
+}
+
+export async function regenerateAIGameProjectSection(
+  projectId: number,
+  section: AIGameProjectSection,
+  instruction = "",
+  token = getStoredToken(),
+): Promise<Required<Pick<AIGameProjectDetail, "project">> & AIGameProjectDetail> {
+  const response = await fetch(buildApiUrl(`/api/v1/ai-game-projects/${projectId}/regenerate-section`), {
+    method: "POST",
+    headers: jsonHeaders(token),
+    body: JSON.stringify({
+      section,
+      instruction,
+    }),
+  })
+  const data = await readJsonResponse<AIGameProjectDetail>(response)
+
+  if (!response.ok) {
+    throw new Error(data.detail || data.message || "重新生成模块失败。")
   }
   if (!data.project) {
     throw new Error("项目详情结构不完整。")

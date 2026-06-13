@@ -32,11 +32,11 @@ const capabilities = [
   { title: "角色设定图", icon: Gamepad2 },
   { title: "场景设定图", icon: Sparkles },
   { title: "UI 游戏截图", icon: MonitorUp },
-  { title: "类游戏宣传片", icon: Film },
+  { title: "视频分镜方案", icon: Film },
   { title: "2D sprite sheet", icon: Layers3 },
-  { title: "3D 模型预览", icon: Box },
+  { title: "3D 资产方向", icon: Box },
   { title: "游戏 Pitch 包", icon: Package },
-  { title: "可交互 Demo 原型", icon: Play },
+  { title: "可交互 Demo 方案", icon: Play },
 ]
 
 const demos = [
@@ -71,9 +71,9 @@ const demos = [
 
 const workflow = [
   { step: "01", title: "输入游戏想法", description: "用一句话、一个世界观或一段玩法描述开始。" },
-  { step: "02", title: "AI 生成视觉方向", description: "整理角色、场景、UI、镜头和资产风格。" },
-  { step: "03", title: "输出视频和素材包", description: "形成可传播、可展示、可继续开发的交付物。" },
-  { step: "04", title: "升级为可交互 Demo", description: "后续接入 Unity / WebGL 原型和在线演示。" },
+  { step: "02", title: "AI 生成方案初稿", description: "整理世界观、角色、场景、UI、镜头和资产 Prompt。" },
+  { step: "03", title: "进入项目工作台", description: "复制 Prompt、调整模块，并把概念方案继续细化。" },
+  { step: "04", title: "提交定制需求", description: "需要宣传片、素材包或 Demo 时，再进入人工报价和制作流程。" },
 ]
 
 const plans = [
@@ -164,11 +164,11 @@ export default function HomePage() {
               <h1 className="text-5xl font-bold tracking-normal text-white md:text-7xl">
                 造境 AI
                 <span className="mt-3 block bg-gradient-to-r from-cyan-200 via-white to-amber-200 bg-clip-text text-4xl text-transparent md:text-6xl">
-                  一句话生成你的游戏世界
+                  一句话生成游戏世界方案
                 </span>
               </h1>
               <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-300">
-                输入一个游戏想法，AI 帮你生成类游戏宣传片、角色、场景、UI、2D/3D 素材包，并逐步升级为可交互 Demo。
+                输入一个游戏想法，生成世界观、角色、场景、UI、视频分镜和 Pitch 初稿；需要宣传片、素材包或可交互 Demo 时，再提交定制制作需求。
               </p>
               <p className="mt-5 max-w-2xl text-sm leading-7 text-neutral-400">
                 适合游戏创业者、独立开发者、短视频创作者、AI 创作者、游戏工作室做概念验证和招商展示。
@@ -176,7 +176,7 @@ export default function HomePage() {
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
                   <Link href="/generate-game">
-                    开始生成游戏世界
+                    免费生成概念方案
                     <Sparkles className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -187,7 +187,7 @@ export default function HomePage() {
                   className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                 >
                   <Link href="/submit">
-                    提交人工需求
+                    提交定制制作需求
                     <Send className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -223,7 +223,7 @@ export default function HomePage() {
                 <h2 className="mt-3 text-3xl font-semibold md:text-5xl">从游戏想法到可展示原型的一站式路径</h2>
               </div>
               <p className="max-w-xl text-sm leading-7 text-neutral-400">
-                第一阶段聚焦概念视频、Pitch 包和素材包交付，用 AI 生成加人工整理把结果做成能展示、能传播、能继续开发的资产。
+                第一阶段先用 AI 生成概念方案和可复制 Prompt，再通过人工制作把高意向项目升级成能展示、能传播、能继续开发的资产。
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -352,7 +352,7 @@ export default function HomePage() {
             <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
               <Boxes className="mb-5 h-8 w-8 text-fuchsia-200" />
               <p className="text-lg leading-9 text-neutral-200">
-                当前阶段先生成游戏概念视频和素材包，后续将逐步支持可交互 Demo、Unity/Godot/Unreal 导出、虚拟场景生成、数字孪生和 AI 仿真环境。
+                当前阶段先生成游戏世界方案、视觉 Prompt 和 Pitch 初稿；有明确方向后，可提交需求升级为宣传片、素材包或可交互 Demo 的定制制作流程。
               </p>
             </div>
           </div>
@@ -364,7 +364,7 @@ export default function HomePage() {
             <h2 className="text-3xl font-semibold md:text-5xl">把你的游戏想法变成第一版视觉原型</h2>
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
-                <Link href="/generate-game">开始生成游戏世界</Link>
+                <Link href="/generate-game">免费生成概念方案</Link>
               </Button>
               <Button
                 asChild
@@ -372,7 +372,7 @@ export default function HomePage() {
                 variant="outline"
                 className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
               >
-                <Link href="/submit">提交人工需求</Link>
+                <Link href="/submit">提交定制制作需求</Link>
               </Button>
               <Button
                 asChild

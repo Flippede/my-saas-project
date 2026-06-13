@@ -8,7 +8,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: "造境 AI - 一句话生成你的游戏世界",
-  description: "AI 游戏原型生成平台，帮助用户生成类游戏宣传片、角色、场景、UI、2D/3D 素材包和可交互 Demo。",
+  description: "AI 游戏世界方案生成平台，帮助用户整理世界观、角色、场景、UI、视频分镜、素材 Prompt 和 Pitch 初稿。",
   generator: "v0.app",
   icons: {
     icon: [
