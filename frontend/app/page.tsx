@@ -1,12 +1,10 @@
 import Link from "next/link"
 import {
-  ArrowRight,
   Box,
   Boxes,
   CheckCircle2,
   Clapperboard,
   Compass,
-  Cpu,
   Film,
   Gamepad2,
   Layers3,
@@ -177,9 +175,9 @@ export default function HomePage() {
               </p>
               <div className="mt-9 flex flex-col gap-3 sm:flex-row">
                 <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
-                  <Link href="/submit">
-                    立即提交游戏想法
-                    <Send className="h-4 w-4" />
+                  <Link href="/generate-game">
+                    开始生成游戏世界
+                    <Sparkles className="h-4 w-4" />
                   </Link>
                 </Button>
                 <Button
@@ -188,9 +186,9 @@ export default function HomePage() {
                   variant="outline"
                   className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                 >
-                  <Link href="#demos">
-                    查看 Demo 案例
-                    <ArrowRight className="h-4 w-4" />
+                  <Link href="/submit">
+                    提交人工需求
+                    <Send className="h-4 w-4" />
                   </Link>
                 </Button>
               </div>
@@ -366,7 +364,7 @@ export default function HomePage() {
             <h2 className="text-3xl font-semibold md:text-5xl">把你的游戏想法变成第一版视觉原型</h2>
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
-                <Link href="/submit">提交游戏想法</Link>
+                <Link href="/generate-game">开始生成游戏世界</Link>
               </Button>
               <Button
                 asChild
@@ -374,7 +372,7 @@ export default function HomePage() {
                 variant="outline"
                 className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
               >
-                <Link href="/login">登录 / 注册</Link>
+                <Link href="/submit">提交人工需求</Link>
               </Button>
               <Button
                 asChild

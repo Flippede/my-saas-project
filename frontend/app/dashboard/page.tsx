@@ -10,17 +10,20 @@ import {
   Clapperboard,
   CreditCard,
   FileText,
+  Gamepad2,
   LayoutDashboard,
   PackageCheck,
   Plus,
   ShieldCheck,
   Sparkles,
+  WandSparkles,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Navbar } from "@/components/ui/navbar"
 import { getStoredToken } from "@/lib/app-config"
 import { getAdminMe } from "@/lib/admin"
+import { type AIGameProject, getAIGameProjects } from "@/lib/ai-game-projects"
 import { type GameSubmission, getMyGameSubmissions } from "@/lib/game-submissions"
 
 const statusLabels: Record<string, string> = {
@@ -30,6 +33,13 @@ const statusLabels: Record<string, string> = {
   in_progress: "制作中",
   delivered: "已交付",
   cancelled: "已取消",
+}
+
+const projectStatusLabels: Record<string, string> = {
+  draft: "草稿",
+  generating: "生成中",
+  generated: "已生成",
+  failed: "生成失败",
 }
 
 const tools = [
@@ -66,8 +76,11 @@ function formatDate(value: string) {
 
 export default function DashboardPage() {
   const [submissions, setSubmissions] = useState<GameSubmission[]>([])
+  const [aiProjects, setAiProjects] = useState<AIGameProject[]>([])
   const [loadingSubmissions, setLoadingSubmissions] = useState(true)
+  const [loadingAiProjects, setLoadingAiProjects] = useState(true)
   const [submissionsError, setSubmissionsError] = useState("")
+  const [aiProjectsError, setAiProjectsError] = useState("")
   const [hasToken, setHasToken] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
 
@@ -86,27 +99,40 @@ export default function DashboardPage() {
 
       if (!token) {
         setLoadingSubmissions(false)
+        setLoadingAiProjects(false)
         setSubmissions([])
+        setAiProjects([])
         return
       }
 
       setLoadingSubmissions(true)
+      setLoadingAiProjects(true)
       setSubmissionsError("")
+      setAiProjectsError("")
 
-      try {
-        const items = await getMyGameSubmissions(token)
-        if (!cancelled) {
-          setSubmissions(items)
-        }
-      } catch (requestError) {
-        if (!cancelled) {
-          setSubmissionsError(requestError instanceof Error ? requestError.message : "获取我的需求失败。")
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingSubmissions(false)
-        }
+      const [submissionResult, projectResult] = await Promise.allSettled([
+        getMyGameSubmissions(token),
+        getAIGameProjects(token),
+      ])
+
+      if (cancelled) {
+        return
       }
+
+      if (submissionResult.status === "fulfilled") {
+        setSubmissions(submissionResult.value)
+      } else {
+        setSubmissionsError(submissionResult.reason instanceof Error ? submissionResult.reason.message : "获取我的需求失败。")
+      }
+
+      if (projectResult.status === "fulfilled") {
+        setAiProjects(projectResult.value)
+      } else {
+        setAiProjectsError(projectResult.reason instanceof Error ? projectResult.reason.message : "获取 AI 游戏项目失败。")
+      }
+
+      setLoadingSubmissions(false)
+      setLoadingAiProjects(false)
     }
 
     void loadSubmissions()
@@ -120,10 +146,11 @@ export default function DashboardPage() {
     () => [
       { title: "会员状态", value: "以登录信息为准", description: "右上角会显示当前账号会员状态。", icon: BadgeCheck },
       { title: "支付状态", value: "暂无待支付订单", description: "可从服务套餐或会员入口继续开通。", icon: CreditCard },
+      { title: "我的 AI 项目", value: `${aiProjects.length} 个`, description: "AI 自动生成的游戏世界方案会在这里归档。", icon: Gamepad2 },
       { title: "我的需求", value: `${submissions.length} 条`, description: "提交游戏想法后会在这里整理需求。", icon: FileText },
       { title: "我的订单", value: "0 笔", description: "付费服务订单会在这里汇总。", icon: BriefcaseBusiness },
     ],
-    [submissions.length],
+    [aiProjects.length, submissions.length],
   )
 
   return (
@@ -145,15 +172,28 @@ export default function DashboardPage() {
                 管理需求、订单、生成项目和待交付内容。第一版已接入真实需求提交，后续可继续扩展订单和交付数据。
               </p>
             </div>
-            <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
-              <Link href="/submit">
-                <Plus className="h-4 w-4" />
-                提交新想法
-              </Link>
-            </Button>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
+                <Link href="/generate-game">
+                  <WandSparkles className="h-4 w-4" />
+                  生成游戏世界
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="rounded-md border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="/submit">
+                  <Plus className="h-4 w-4" />
+                  提交人工需求
+                </Link>
+              </Button>
+            </div>
           </section>
 
-          <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             {statusCards.map(({ title, value, description, icon: Icon }) => (
               <div key={title} className="rounded-lg border border-white/10 bg-white/[0.045] p-5 backdrop-blur">
                 <Icon className="mb-5 h-6 w-6 text-cyan-200" />
@@ -187,6 +227,89 @@ export default function DashboardPage() {
               </div>
             </section>
           ) : null}
+
+          <section className="mt-6 rounded-lg border border-white/10 bg-white/[0.045] p-7 backdrop-blur">
+            <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+              <div>
+                <h2 className="text-2xl font-semibold">我的 AI 游戏项目</h2>
+                <p className="mt-2 text-sm text-neutral-400">这里展示当前登录账号自动生成过的游戏世界方案。</p>
+              </div>
+              <Button asChild className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
+                <Link href="/generate-game">
+                  <WandSparkles className="h-4 w-4" />
+                  新建 AI 游戏项目
+                </Link>
+              </Button>
+            </div>
+
+            {loadingAiProjects ? (
+              <div className="rounded-lg border border-white/10 bg-black/25 p-5 text-sm text-neutral-300">正在加载 AI 游戏项目...</div>
+            ) : aiProjectsError ? (
+              <div className="rounded-lg border border-amber-300/25 bg-amber-300/[0.08] p-5 text-sm text-amber-100">
+                {aiProjectsError}
+              </div>
+            ) : !hasToken ? (
+              <div className="rounded-lg border border-white/10 bg-black/25 p-6">
+                <h3 className="text-xl font-semibold">登录后可创建和查看 AI 游戏项目。</h3>
+                <p className="mt-3 text-neutral-300">AI 生成结果会自动保存到你的工作台，方便继续整理 Prompt 和 Pitch。</p>
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <Button asChild className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
+                    <Link href="/login">登录 / 注册</Link>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="rounded-md border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                  >
+                    <Link href="/generate-game">查看生成页</Link>
+                  </Button>
+                </div>
+              </div>
+            ) : aiProjects.length === 0 ? (
+              <div className="rounded-lg border border-white/10 bg-black/25 p-6">
+                <h3 className="text-xl font-semibold">你还没有 AI 游戏项目。</h3>
+                <p className="mt-3 text-neutral-300">从一句话开始，生成第一版世界观、Boss、场景、UI 和素材 Prompt。</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {aiProjects.map((item) => (
+                  <article key={item.id} className="rounded-lg border border-white/10 bg-black/25 p-5">
+                    <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <h3 className="text-xl font-semibold">{item.title || "未命名 AI 游戏项目"}</h3>
+                          <span className="rounded border border-cyan-200/30 bg-cyan-200/10 px-2 py-1 text-xs text-cyan-100">
+                            {projectStatusLabels[item.status] || item.status || "已生成"}
+                          </span>
+                        </div>
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-neutral-300">{item.one_sentence_idea}</p>
+                        <div className="mt-3 flex flex-wrap gap-2 text-sm text-neutral-300">
+                          <span className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1">
+                            类型：{item.game_type || "未填写"}
+                          </span>
+                          <span className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1">
+                            画风：{item.art_style || "未填写"}
+                          </span>
+                          <span className="rounded border border-white/10 bg-white/[0.04] px-2.5 py-1">
+                            平台：{item.target_platform || "未填写"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-3 md:items-end">
+                        <div className="text-sm text-neutral-400">创建时间：{formatDate(item.created_at)}</div>
+                        <Button asChild className="rounded-md bg-white text-black hover:bg-neutral-200">
+                          <Link href={`/game-projects/${item.id}`}>
+                            查看详情
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
           <section className="mt-6 rounded-lg border border-white/10 bg-white/[0.045] p-7 backdrop-blur">
             <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">

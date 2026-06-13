@@ -23,6 +23,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 
+from services.ai_game_generator import generate_game_world, get_ai_game_provider_config
 from tools.script_generator import generate_scripts
 from tools.video_storyboard import generate_storyboard
 
@@ -360,6 +361,39 @@ def init_db() -> None:
             notes TEXT,
             admin_note TEXT,
             status TEXT NOT NULL DEFAULT 'new',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ai_game_projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL DEFAULT '',
+            one_sentence_idea TEXT NOT NULL,
+            game_type TEXT,
+            art_style TEXT,
+            target_platform TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS ai_game_generation_runs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            project_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            input_json TEXT NOT NULL DEFAULT '{}',
+            output_json TEXT NOT NULL DEFAULT '{}',
+            provider TEXT,
+            model_name TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            error_message TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -744,6 +778,13 @@ class GameSubmissionRequest(BaseModel):
     notes: Optional[str] = ""
 
 
+class AIGameProjectCreateRequest(BaseModel):
+    idea: str = Field(min_length=1, max_length=1200)
+    game_type: Optional[str] = ""
+    art_style: Optional[str] = ""
+    target_platform: Optional[str] = ""
+
+
 class AdminGameSubmissionUpdateRequest(BaseModel):
     status: Optional[str] = None
     admin_note: Optional[str] = None
@@ -836,6 +877,46 @@ def _format_game_submission(row: sqlite3.Row) -> dict:
         "notes": row["notes"] or "",
         "admin_note": row["admin_note"] or "",
         "status": row["status"] or "new",
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _safe_json_loads(value: Optional[str], fallback: Any) -> Any:
+    try:
+        return json.loads(value or "")
+    except (TypeError, json.JSONDecodeError):
+        return fallback
+
+
+def _format_ai_game_project(row: sqlite3.Row) -> dict:
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "title": row["title"] or "",
+        "one_sentence_idea": row["one_sentence_idea"] or "",
+        "game_type": row["game_type"] or "",
+        "art_style": row["art_style"] or "",
+        "target_platform": row["target_platform"] or "",
+        "status": row["status"] or "draft",
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
+def _format_ai_game_generation_run(row: Optional[sqlite3.Row]) -> Optional[dict]:
+    if not row:
+        return None
+    return {
+        "id": row["id"],
+        "project_id": row["project_id"],
+        "user_id": row["user_id"],
+        "input_json": _safe_json_loads(row["input_json"], {}),
+        "output_json": _safe_json_loads(row["output_json"], {}),
+        "provider": row["provider"] or "",
+        "model_name": row["model_name"] or "",
+        "status": row["status"] or "pending",
+        "error_message": row["error_message"] or "",
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
     }
@@ -1284,6 +1365,193 @@ async def get_my_game_submissions(token: str = Depends(verify_token_from_header)
 
     return {
         "items": [_format_game_submission(row) for row in rows],
+    }
+
+
+@app.post("/api/v1/ai-game-projects")
+async def create_ai_game_project(body: AIGameProjectCreateRequest, token: str = Depends(verify_token_from_header)):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    idea = _clean_text(body.idea)
+    if not idea:
+        raise HTTPException(status_code=400, detail="请填写游戏想法")
+
+    input_payload = {
+        "idea": idea,
+        "game_type": _clean_text(body.game_type),
+        "art_style": _clean_text(body.art_style),
+        "target_platform": _clean_text(body.target_platform),
+    }
+    now = now_utc().isoformat()
+    provider_config = get_ai_game_provider_config()
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO ai_game_projects (
+            user_id, title, one_sentence_idea, game_type, art_style,
+            target_platform, status, created_at, updated_at
+        )
+        VALUES (?, '', ?, ?, ?, ?, 'generating', ?, ?)
+        """,
+        (
+            user_id,
+            idea,
+            input_payload["game_type"],
+            input_payload["art_style"],
+            input_payload["target_platform"],
+            now,
+            now,
+        ),
+    )
+    project_id = int(cur.lastrowid)
+    cur.execute(
+        """
+        INSERT INTO ai_game_generation_runs (
+            project_id, user_id, input_json, output_json, provider,
+            model_name, status, error_message, created_at, updated_at
+        )
+        VALUES (?, ?, ?, '{}', ?, ?, 'running', '', ?, ?)
+        """,
+        (
+            project_id,
+            user_id,
+            json.dumps(input_payload, ensure_ascii=False),
+            provider_config["provider"],
+            provider_config["model_name"],
+            now,
+            now,
+        ),
+    )
+    run_id = int(cur.lastrowid)
+    conn.commit()
+    conn.close()
+
+    try:
+        output = generate_game_world(input_payload)
+        title = _clean_text(output.get("title")) or idea[:40]
+        finished_at = now_utc().isoformat()
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE ai_game_projects
+            SET title = ?, status = 'generated', updated_at = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (title, finished_at, project_id, user_id),
+        )
+        cur.execute(
+            """
+            UPDATE ai_game_generation_runs
+            SET output_json = ?, status = 'success', error_message = '', updated_at = ?
+            WHERE id = ? AND project_id = ? AND user_id = ?
+            """,
+            (
+                json.dumps(output, ensure_ascii=False),
+                finished_at,
+                run_id,
+                project_id,
+                user_id,
+            ),
+        )
+        conn.commit()
+        cur.execute("SELECT * FROM ai_game_projects WHERE id = ? AND user_id = ?", (project_id, user_id))
+        project_row = cur.fetchone()
+        cur.execute("SELECT * FROM ai_game_generation_runs WHERE id = ? AND user_id = ?", (run_id, user_id))
+        run_row = cur.fetchone()
+        conn.close()
+    except Exception as exc:
+        failed_at = now_utc().isoformat()
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            UPDATE ai_game_projects
+            SET status = 'failed', updated_at = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (failed_at, project_id, user_id),
+        )
+        cur.execute(
+            """
+            UPDATE ai_game_generation_runs
+            SET status = 'failed', error_message = ?, updated_at = ?
+            WHERE id = ? AND project_id = ? AND user_id = ?
+            """,
+            (str(exc), failed_at, run_id, project_id, user_id),
+        )
+        conn.commit()
+        conn.close()
+        raise HTTPException(status_code=500, detail="AI 游戏世界生成失败，请稍后重试") from exc
+
+    return {
+        "project": _format_ai_game_project(project_row),
+        "run": _format_ai_game_generation_run(run_row),
+        "result": output,
+    }
+
+
+@app.get("/api/v1/ai-game-projects")
+async def list_ai_game_projects(token: str = Depends(verify_token_from_header)):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT *
+        FROM ai_game_projects
+        WHERE user_id = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return {
+        "items": [_format_ai_game_project(row) for row in rows],
+    }
+
+
+@app.get("/api/v1/ai-game-projects/{project_id}")
+async def get_ai_game_project(project_id: int, token: str = Depends(verify_token_from_header)):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM ai_game_projects WHERE id = ? AND user_id = ?", (project_id, user_id))
+    project_row = cur.fetchone()
+    if not project_row:
+        conn.close()
+        raise HTTPException(status_code=404, detail="AI 游戏项目不存在")
+
+    cur.execute(
+        """
+        SELECT *
+        FROM ai_game_generation_runs
+        WHERE project_id = ? AND user_id = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (project_id, user_id),
+    )
+    run_row = cur.fetchone()
+    conn.close()
+
+    formatted_run = _format_ai_game_generation_run(run_row)
+    generation_result = formatted_run["output_json"] if formatted_run and formatted_run.get("output_json") else None
+    return {
+        "project": _format_ai_game_project(project_row),
+        "latest_run": formatted_run,
+        "generation_result": generation_result,
     }
 
 
