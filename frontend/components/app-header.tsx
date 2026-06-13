@@ -107,7 +107,7 @@ export function AppHeader() {
 
         setUserInfo({
           user_id: currentUser?.user_id || "",
-          username: currentUser?.username || "AI 创作者",
+          username: currentUser?.username || "造境创作者",
           is_vip: currentUser?.is_vip ?? 0,
           expire_at: currentUser?.expire_at || "",
         })
@@ -120,7 +120,7 @@ export function AppHeader() {
       } catch {
         setUserInfo({
           user_id: "",
-          username: "AI 创作者",
+          username: "造境创作者",
           is_vip: 0,
           expire_at: "",
         })
@@ -241,7 +241,7 @@ export function AppHeader() {
             />
 
             <div className="hidden items-center gap-2 sm:flex">
-              <div className="text-sm font-medium text-neutral-100">{userInfo?.username || "AI 创作者"}</div>
+                <div className="text-sm font-medium text-neutral-100">{userInfo?.username || "造境创作者"}</div>
               {loadingUser ? (
                 <div className="text-xs text-neutral-400">加载中...</div>
               ) : isVip ? (
@@ -260,7 +260,7 @@ export function AppHeader() {
                 onClick={handleOpenPayment}
                 className="h-9 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 px-4 text-sm font-semibold text-neutral-900 transition-all hover:brightness-110"
               >
-                {isVip ? "已是 VIP" : "升级 VIP"}
+                {isVip ? "已是会员" : "会员 / 服务套餐"}
               </button>
             ) : null}
 
@@ -268,7 +268,7 @@ export function AppHeader() {
               onClick={() => router.push("/generate")}
               className="h-9 rounded-full bg-blue-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
             >
-              进入工作台
+              用户工作台
             </button>
 
             <button onClick={handleLogout} className="text-sm text-neutral-300 transition-colors hover:text-white">
@@ -288,7 +288,7 @@ export function AppHeader() {
       {showPaymentModal ? (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-neutral-900/90 p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white">AI Storyboard X 订阅升级</h3>
+            <h3 className="text-lg font-semibold text-white">造境 AI 会员 / 服务套餐</h3>
             <p className="mt-1 text-sm text-amber-300">¥{formatAmount(paymentAmount)}</p>
 
             <div className="mt-5 flex justify-center">

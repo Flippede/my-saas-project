@@ -1,596 +1,393 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Spotlight } from "@/components/ui/spotlight"
-import { SplineScene } from "@/components/ui/spline-scene"
-import AnimatedGradientBackground from "@/components/ui/animated-gradient-background"
-import { SparklesCore } from "@/components/ui/sparkles"
-import { BentoGrid, BentoCard } from "@/components/ui/bento-grid"
-import { Navbar } from "@/components/ui/navbar"
-import { Pricing } from "@/components/ui/pricing"
 import Link from "next/link"
 import {
-  CheckCircle,
   ArrowRight,
-  TrendingUp,
-  Clock,
-  DollarSign,
-  BarChart3,
-  Bot,
-  Workflow,
-  Brain,
-  MessageSquare,
-  Cog,
-  Mail,
-  Phone,
-  MapPin,
-  Linkedin,
-  Twitter,
-  Facebook,
+  Box,
+  Boxes,
+  CheckCircle2,
+  Clapperboard,
+  Compass,
+  Cpu,
+  Film,
+  Gamepad2,
+  Layers3,
+  MonitorUp,
+  Package,
+  Play,
+  Send,
+  Sparkles,
+  Zap,
 } from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { Navbar } from "@/components/ui/navbar"
+
+const painPoints = [
+  "有游戏想法，但不会美术",
+  "想做 Demo，但没有团队",
+  "想招商融资，但缺视觉材料",
+  "想发 AI 游戏短视频，但缺稳定产出流程",
+  "AI 工具太散，生成结果不能直接变成项目资产",
+]
+
+const capabilities = [
+  { title: "游戏世界观生成", icon: Compass },
+  { title: "角色设定图", icon: Gamepad2 },
+  { title: "场景设定图", icon: Sparkles },
+  { title: "UI 游戏截图", icon: MonitorUp },
+  { title: "类游戏宣传片", icon: Film },
+  { title: "2D sprite sheet", icon: Layers3 },
+  { title: "3D 模型预览", icon: Box },
+  { title: "游戏 Pitch 包", icon: Package },
+  { title: "可交互 Demo 原型", icon: Play },
+]
+
+const demos = [
+  {
+    title: "国风暗黑动作游戏",
+    subtitle: "Oriental Dark Action",
+    description: "东方玄幻、雷电剑客、雨夜古寺、Boss 战、横版动作。",
+    tags: ["横版动作", "Boss 战", "技能 UI"],
+    gradient: "from-emerald-400/22 via-cyan-400/10 to-amber-300/18",
+    accent: "text-emerald-200",
+    hud: "HP 82% · QTE READY",
+  },
+  {
+    title: "赛博朋克开放世界",
+    subtitle: "Neon Open World",
+    description: "霓虹城市、机械义体、飞行摩托、枪战、第三人称任务 UI。",
+    tags: ["开放世界", "任务系统", "载具追逐"],
+    gradient: "from-cyan-400/22 via-fuchsia-400/14 to-blue-400/16",
+    accent: "text-cyan-200",
+    hud: "MISSION SYNC · 03:21",
+  },
+  {
+    title: "像素 RPG 冒险游戏",
+    subtitle: "Pixel RPG Adventure",
+    description: "像素村庄、地牢探索、NPC 对话、道具栏、战斗动画。",
+    tags: ["像素风", "地牢", "Sprite"],
+    gradient: "from-amber-300/22 via-rose-400/10 to-lime-300/16",
+    accent: "text-amber-200",
+    hud: "ITEM x12 · DIALOG ON",
+  },
+]
+
+const workflow = [
+  { step: "01", title: "输入游戏想法", description: "用一句话、一个世界观或一段玩法描述开始。" },
+  { step: "02", title: "AI 生成视觉方向", description: "整理角色、场景、UI、镜头和资产风格。" },
+  { step: "03", title: "输出视频和素材包", description: "形成可传播、可展示、可继续开发的交付物。" },
+  { step: "04", title: "升级为可交互 Demo", description: "后续接入 Unity / WebGL 原型和在线演示。" },
+]
+
+const plans = [
+  {
+    name: "基础概念包",
+    price: "199-499 元",
+    features: ["游戏名称", "世界观", "角色图", "场景图", "UI 风格图"],
+  },
+  {
+    name: "AI 游戏宣传片",
+    price: "999-2999 元",
+    features: ["15-30 秒类游戏宣传片", "竖屏版", "横屏版", "主视觉图"],
+  },
+  {
+    name: "游戏 Pitch 包",
+    price: "2999-9999 元",
+    features: ["宣传片", "设定文档", "角色场景", "UI", "项目介绍页", "招商展示材料"],
+  },
+  {
+    name: "可交互 Demo",
+    price: "10000 元起",
+    features: ["Unity / WebGL 原型", "角色控制", "基础战斗", "简单关卡", "在线演示链接"],
+  },
+]
+
+function EnginePreview() {
+  return (
+    <div className="relative min-h-[360px] overflow-hidden rounded-lg border border-cyan-300/20 bg-black/45 shadow-[0_0_70px_rgba(34,211,238,0.16)]">
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(34,211,238,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.1)_1px,transparent_1px)] bg-[size:34px_34px]" />
+      <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(6,182,212,0.18),transparent_32%,rgba(244,114,182,0.16)_58%,transparent_78%)]" />
+      <div className="relative z-10 flex h-full min-h-[360px] flex-col justify-between p-5">
+        <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.18em] text-cyan-100/80">
+          <span>World Engine</span>
+          <span>Prototype 01</span>
+        </div>
+
+        <div className="mx-auto grid w-full max-w-md grid-cols-5 gap-2">
+          {Array.from({ length: 25 }).map((_, index) => (
+            <div
+              key={index}
+              className={`aspect-square rounded border ${
+                index === 7 || index === 13 || index === 17
+                  ? "border-amber-300/70 bg-amber-300/20 shadow-[0_0_22px_rgba(252,211,77,0.28)]"
+                  : index === 11 || index === 12
+                    ? "border-cyan-300/70 bg-cyan-300/20 shadow-[0_0_22px_rgba(34,211,238,0.3)]"
+                    : "border-white/10 bg-white/[0.03]"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          {["角色生成", "场景拼装", "Demo 编排"].map((item, index) => (
+            <div key={item} className="rounded border border-white/12 bg-white/[0.06] p-3 backdrop-blur">
+              <div className="mb-2 flex items-center gap-2 text-xs text-neutral-300">
+                <span className="h-1.5 w-1.5 rounded-sm bg-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.8)]" />
+                {item}
+              </div>
+              <div className="h-1.5 rounded-sm bg-white/10">
+                <div
+                  className="h-full rounded-sm bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-300"
+                  style={{ width: `${62 + index * 12}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-black">
-      {/* Navigation Component */}
+    <div className="min-h-screen bg-[#050608] text-white">
       <Navbar />
 
-      {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-black">
-        <div className="container mx-auto px-4">
-          <Card className="w-full h-[500px] bg-black/[0.96] relative overflow-hidden border-none">
-            <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" />
+      <main>
+        <section className="relative overflow-hidden border-b border-white/10">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] bg-[size:64px_64px]" />
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(34,211,238,0.16),transparent_30%,rgba(244,114,182,0.12)_58%,rgba(250,204,21,0.08))]" />
+          <div className="relative mx-auto grid min-h-[92vh] max-w-7xl items-center gap-10 px-4 pb-24 pt-32 md:grid-cols-[1.02fr_0.98fr] lg:px-6">
+            <div className="max-w-3xl">
+              <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-cyan-300/25 bg-cyan-300/10 px-4 py-2 text-sm text-cyan-100 shadow-[0_0_28px_rgba(34,211,238,0.18)]">
+                <Zap className="h-4 w-4" />
+                造境 AI · AI 游戏原型生成平台
+              </div>
+              <h1 className="text-5xl font-bold tracking-normal text-white md:text-7xl">
+                造境 AI
+                <span className="mt-3 block bg-gradient-to-r from-cyan-200 via-white to-amber-200 bg-clip-text text-4xl text-transparent md:text-6xl">
+                  一句话生成你的游戏世界
+                </span>
+              </h1>
+              <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-300">
+                输入一个游戏想法，AI 帮你生成类游戏宣传片、角色、场景、UI、2D/3D 素材包，并逐步升级为可交互 Demo。
+              </p>
+              <p className="mt-5 max-w-2xl text-sm leading-7 text-neutral-400">
+                适合游戏创业者、独立开发者、短视频创作者、AI 创作者、游戏工作室做概念验证和招商展示。
+              </p>
+              <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+                <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
+                  <Link href="/submit">
+                    立即提交游戏想法
+                    <Send className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                >
+                  <Link href="#demos">
+                    查看 Demo 案例
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
 
-            <div className="flex h-full">
-              {/* Left content */}
-              <div className="flex-1 p-8 relative z-10 flex flex-col justify-center">
-                <h1 className="text-4xl md:text-5xl font-bold text-white bg-gradient-to-b from-neutral-50 to-neutral-400 bg-clip-text">
-                  AI 爆款脚本引擎：成本更低，转化更猛
-                </h1>
-                <p className="mt-4 text-neutral-300 max-w-lg">
-                  把短视频引流脚本自动化生成：用 AI 24/7 持续产出爆款脚本，帮你降本增效、引流变现。
-                </p>
+            <EnginePreview />
+          </div>
+        </section>
 
-                <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                  <Button asChild size="lg" className="bg-white text-black hover:bg-gray-100">
-                    <Link href="/dashboard">
-                      进入工具控制台
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
+        <section id="pain" className="border-b border-white/10 bg-[#07090f] py-24">
+          <div className="mx-auto max-w-7xl px-4 lg:px-6">
+            <div className="mb-12 max-w-3xl">
+              <p className="text-sm uppercase tracking-[0.22em] text-cyan-200">Problem</p>
+              <h2 className="mt-3 text-3xl font-semibold md:text-5xl">想法很多，第一版视觉原型最难落地</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              {painPoints.map((item) => (
+                <div key={item} className="rounded-lg border border-white/10 bg-white/[0.04] p-5 backdrop-blur">
+                  <CheckCircle2 className="mb-5 h-5 w-5 text-rose-200" />
+                  <p className="text-base leading-7 text-neutral-200">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="solutions" className="border-b border-white/10 bg-[#050608] py-24">
+          <div className="mx-auto max-w-7xl px-4 lg:px-6">
+            <div className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+              <div>
+                <p className="text-sm uppercase tracking-[0.22em] text-amber-200">Solution</p>
+                <h2 className="mt-3 text-3xl font-semibold md:text-5xl">从游戏想法到可展示原型的一站式路径</h2>
+              </div>
+              <p className="max-w-xl text-sm leading-7 text-neutral-400">
+                第一阶段聚焦概念视频、Pitch 包和素材包交付，用 AI 生成加人工整理把结果做成能展示、能传播、能继续开发的资产。
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {capabilities.map(({ title, icon: Icon }) => (
+                <div
+                  key={title}
+                  className="group rounded-lg border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025))] p-5 transition hover:border-cyan-200/45 hover:shadow-[0_0_34px_rgba(34,211,238,0.12)]"
+                >
+                  <Icon className="mb-5 h-6 w-6 text-cyan-200" />
+                  <h3 className="text-lg font-medium text-white">{title}</h3>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="demos" className="border-b border-white/10 bg-[#080a10] py-24">
+          <div className="mx-auto max-w-7xl px-4 lg:px-6">
+            <div className="mb-12 max-w-3xl">
+              <p className="text-sm uppercase tracking-[0.22em] text-fuchsia-200">Demo Cases</p>
+              <h2 className="mt-3 text-3xl font-semibold md:text-5xl">先用 3 个方向验证传播和付费</h2>
+            </div>
+            <div className="grid gap-5 lg:grid-cols-3">
+              {demos.map((demo) => (
+                <article
+                  key={demo.title}
+                  className="overflow-hidden rounded-lg border border-white/12 bg-white/[0.04] shadow-[0_20px_60px_rgba(0,0,0,0.28)]"
+                >
+                  <div className={`relative h-60 bg-gradient-to-br ${demo.gradient}`}>
+                    <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[size:28px_28px]" />
+                    <div className="absolute left-4 right-4 top-4 flex items-center justify-between rounded border border-white/20 bg-black/45 px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-neutral-200">
+                      <span>{demo.subtitle}</span>
+                      <span className={demo.accent}>LIVE HUD</span>
+                    </div>
+                    <div className="absolute bottom-4 left-4 right-4 rounded border border-white/15 bg-black/55 p-4 backdrop-blur">
+                      <div className="mb-3 flex items-center justify-between gap-3 text-xs text-neutral-300">
+                        <span>{demo.hud}</span>
+                        <span>FPS 60</span>
+                      </div>
+                      <div className="h-2 rounded-sm bg-white/10">
+                        <div className="h-full w-3/4 rounded-sm bg-gradient-to-r from-cyan-300 via-fuchsia-300 to-amber-300" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold">{demo.title}</h3>
+                    <p className="mt-3 min-h-[56px] text-sm leading-7 text-neutral-300">{demo.description}</p>
+                    <div className="mt-5 flex flex-wrap gap-2">
+                      {demo.tags.map((tag) => (
+                        <span key={tag} className="rounded border border-white/12 bg-white/[0.06] px-2.5 py-1 text-xs text-neutral-300">
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" className="border-b border-white/10 bg-[#050608] py-24">
+          <div className="mx-auto max-w-7xl px-4 lg:px-6">
+            <div className="mb-12 max-w-3xl">
+              <p className="text-sm uppercase tracking-[0.22em] text-cyan-200">Workflow</p>
+              <h2 className="mt-3 text-3xl font-semibold md:text-5xl">从一句话到第一版交付物</h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-4">
+              {workflow.map((item) => (
+                <div key={item.step} className="rounded-lg border border-white/10 bg-white/[0.04] p-5">
+                  <div className="mb-7 font-mono text-3xl font-semibold text-cyan-200">{item.step}</div>
+                  <h3 className="text-lg font-semibold">{item.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-neutral-400">{item.description}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" className="border-b border-white/10 bg-[#080a10] py-24">
+          <div className="mx-auto max-w-7xl px-4 lg:px-6">
+            <div className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
+              <div>
+                <p className="text-sm uppercase tracking-[0.22em] text-amber-200">Pricing</p>
+                <h2 className="mt-3 text-3xl font-semibold md:text-5xl">会员 / 服务套餐</h2>
+              </div>
+              <p className="max-w-xl text-sm leading-7 text-neutral-400">
+                第一阶段先卖交付结果，不强行承诺全自动平台。套餐按钮会先进入需求提交页，便于确认范围和报价。
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-4">
+              {plans.map((plan, index) => (
+                <div
+                  key={plan.name}
+                  className={`rounded-lg border p-5 ${
+                    index === 2
+                      ? "border-amber-200/45 bg-amber-200/[0.07] shadow-[0_0_34px_rgba(251,191,36,0.12)]"
+                      : "border-white/10 bg-white/[0.04]"
+                  }`}
+                >
+                  <h3 className="text-xl font-semibold">{plan.name}</h3>
+                  <div className="mt-4 text-2xl font-bold text-cyan-100">{plan.price}</div>
+                  <ul className="mt-6 space-y-3 text-sm text-neutral-300">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex gap-2">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-cyan-200" />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button asChild className="mt-7 w-full rounded-md bg-white text-black hover:bg-neutral-200">
+                    <Link href="/submit">提交需求</Link>
                   </Button>
-                  <Button
-                    asChild
-                    size="lg"
-                    variant="outline"
-                    className="border-neutral-600 text-neutral-300 hover:bg-neutral-800 bg-transparent"
-                  >
-                    <Link href="/login">登录 / 获取卡密</Link>
-                  </Button>
                 </div>
-
-                <div className="flex items-center gap-8 text-sm text-neutral-400 mt-6">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
-                    <span>不收建站/部署费</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-400" />
-                    <span>30 天见效加速承诺</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Right content */}
-              <div className="flex-1 relative">
-                <SplineScene
-                  scene="https://prod.spline.design/UbM7F-HZcyTbZ4y3/scene.splinecode"
-                  className="w-full h-full"
-                />
-              </div>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* Problem & Solution Section */}
-      <section className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            <div className="space-y-6">
-              <h2 className="text-3xl md:text-4xl font-bold text-white">还在手搓脚本？流量白白浪费！</h2>
-              <div className="space-y-4 text-gray-300">
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  把时间花在重复写作？AI 一键接管
-                </p>
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  错过咨询？AI 随时生成引流话术
-                </p>
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  想起量却招人？用 AI 扩量省成本
-                </p>
-                <p className="flex items-start gap-3">
-                  <span className="text-red-500 mt-1">✗</span>
-                  对手用 AI 抢流量，你还在等？
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold text-white">让 AI 给你持续产出可投放脚本</h3>
-              <div className="space-y-4 text-gray-300">
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  AI 助你把问题变成引流脚本，马上可用
-                </p>
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  脚本自动生成，每周省下 20+ 小时
-                </p>
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  无需复杂对接，上线即用
-                </p>
-                <p className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                  上线 30 天内更高概率跑出 ROI
-                </p>
-              </div>
+              ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Services Section */}
-      <section id="services" className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">核心印钞功能（不是空话）</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              专为短视频裂变脚本打造，让你更快获取咨询和订单
-            </p>
-          </div>
-
-          <BentoGrid className="lg:grid-rows-3">
-            <BentoCard
-              name="AI 引流脚本生成器"
-              className="lg:row-start-1 lg:row-end-4 lg:col-start-2 lg:col-end-3"
-              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
-              Icon={Bot}
-              description="AI 自动生成引导文案：覆盖问答、线索筛选与私域转化话术，24/7 可投放。"
-              href="#"
-              cta="立即生成"
-            />
-            <BentoCard
-              name="自动裂变脚本流程"
-              className="lg:col-start-1 lg:col-end-2 lg:row-start-1 lg:row-end-3"
-              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
-              Icon={Workflow}
-              description="把爆款脚本拆解成可复制流程，减少人工重复编辑，平均每周省 20+ 小时。"
-              href="#"
-              cta="开始体验"
-            />
-            <BentoCard
-              name="私域对接即用"
-              className="lg:col-start-1 lg:col-end-2 lg:row-start-3 lg:row-end-4"
-              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
-              Icon={Cog}
-              description="无需开发对接：把 AI 能力直接嵌入你的裂变节奏，适配常见业务场景。"
-              href="#"
-              cta="一键上车"
-            />
-            <BentoCard
-              name="爆款洞察与优化建议"
-              className="lg:col-start-3 lg:col-end-3 lg:row-start-1 lg:row-end-2"
-              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
-              Icon={Brain}
-              description="提供可执行建议：帮你调整标题、开场、节奏与转化点，提升转化率。"
-              href="#"
-              cta="看效果"
-            />
-            <BentoCard
-              name="定制私域裂变方案"
-              className="lg:col-start-3 lg:col-end-3 lg:row-start-2 lg:row-end-4"
-              background={<div className="absolute inset-0 bg-black/85 border border-white/10" />}
-              Icon={MessageSquare}
-              description="按你的业务需求定制裂变脚本模板，从灵感到落地一条龙。"
-              href="#"
-              cta="获取样稿"
-            />
-          </BentoGrid>
-        </div>
-      </section>
-
-      {/* Social Proof Section */}
-      <section id="testimonials" className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">真实团队用起来的结果</h2>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="bg-black/80 border-white/10">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <p className="text-gray-300">
-                    "用 AI 引流脚本后，我们的线索转化提升 200%，咨询问题能自动生成应对话术；首月就看见回报。"
-                  </p>
-                  <div>
-                    <p className="font-semibold text-white">张晓峰</p>
-                    <p className="text-sm text-gray-400">增长负责人，科技星</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-black/80 border-white/10">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <p className="text-gray-300">
-                    "自动化脚本让我们每周省下 25 小时，团队把精力放到选题和投放节奏上。"
-                  </p>
-                  <div>
-                    <p className="font-semibold text-white">李明</p>
-                    <p className="text-sm text-gray-400">增长负责人，增长集团</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-black/80 border-white/10">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex text-yellow-400">{"★".repeat(5)}</div>
-                  <p className="text-gray-300">
-                    "AI 引流脚本对接后，电商转化大幅提升，销售增长 180%，用户体验更顺滑。"
-                  </p>
-                  <div>
-                    <p className="font-semibold text-white">陈雨</p>
-                    <p className="text-sm text-gray-400">创始人，零售极致</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Benefits Section */}
-      <section className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">数据说话：你要的就是结果</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              上线后立刻影响转化与现金流
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-green-900/40 rounded-full flex items-center justify-center mx-auto">
-                <Clock className="h-8 w-8 text-green-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">80%</h3>
-              <p className="text-gray-300">手工时间节省</p>
+        <section id="vision" className="border-b border-white/10 bg-[#050608] py-24">
+          <div className="mx-auto grid max-w-7xl gap-8 px-4 md:grid-cols-[0.9fr_1.1fr] lg:px-6">
+            <div>
+              <p className="text-sm uppercase tracking-[0.22em] text-fuchsia-200">Vision</p>
+              <h2 className="mt-3 text-3xl font-semibold md:text-5xl">从游戏原型，到 AI 交互世界</h2>
             </div>
-
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-blue-900/40 rounded-full flex items-center justify-center mx-auto">
-                <DollarSign className="h-8 w-8 text-blue-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">300%</h3>
-              <p className="text-gray-300">6 个月内 ROI 更可控</p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-purple-900/40 rounded-full flex items-center justify-center mx-auto">
-                <BarChart3 className="h-8 w-8 text-purple-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">150%</h3>
-              <p className="text-gray-300">线索转化提升</p>
-            </div>
-
-            <div className="text-center space-y-4">
-              <div className="h-16 w-16 bg-orange-900/40 rounded-full flex items-center justify-center mx-auto">
-                <TrendingUp className="h-8 w-8 text-orange-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-white">24/7</h3>
-              <p className="text-gray-300">全天候私域答疑</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Section */}
-      <section className="py-24 bg-black">
-        <Pricing
-          title="选对 AI 裂变方案，直接开干"
-          description="按你的增长节奏自动扩量\n所有方案包含上线指导、脚本模板与 30 天无忧保障"
-          plans={[
-            {
-              name: "入门版",
-              price: "997",
-              yearlyPrice: "797",
-              period: "month",
-              features: [
-                "AI 引流脚本（客服式话术）",
-                "基础裂变流程（3 步）",
-                "私域素材接入",
-                "基础数据面板",
-                "脚本迭代支持",
-                "30 天无忧保障",
-              ],
-              description: "适合刚起步的团队：先把脚本跑起来",
-              buttonText: "立即体验爆款生成",
-              href: "#contact",
-              isPopular: false,
-            },
-            {
-              name: "专业版",
-              price: "2497",
-              yearlyPrice: "1997",
-              period: "month",
-              features: [
-                "进线索筛选的 AI 引导脚本",
-                "完整裂变流程（10+ 步）",
-                "常见业务场景适配",
-                "高级数据与复盘建议",
-                "优先支持与脚本优化",
-                "定制脚本模板训练",
-                "每月增长优化",
-                "ROI 跟踪与效果报告",
-              ],
-              description: "适合要起量的团队：更快跑出 ROI",
-              buttonText: "扫码开通专业版",
-              href: "#contact",
-              isPopular: true,
-            },
-            {
-              name: "旗舰版",
-              price: "4997",
-              yearlyPrice: "3997",
-              period: "month",
-              features: [
-                "定制裂变方案与部署支持",
-                "无限次裂变流程扩展",
-                "深度系统对接",
-                "专属私域策略师",
-                "全天候优先支持",
-                "增强安全与合规方案",
-                "白标化解决方案",
-                "季度增长复盘",
-                "定制培训与工作坊",
-              ],
-              description: "适合需要全栈增长落地的组织",
-              buttonText: "联系 AI 客服",
-              href: "#contact",
-              isPopular: false,
-            },
-          ]}
-        />
-      </section>
-
-      {/* Process Section */}
-      <section className="py-24 bg-black">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white">3 步走完，从0到可投</h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              咨询-生成-迭代，一套流程直接上手
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center space-y-6">
-              <div className="h-20 w-20 bg-white text-black rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
-                1
-              </div>
-              <h3 className="text-xl font-bold text-white">提交需求，立刻给你引流方案</h3>
-              <p className="text-gray-300">
-                提交关键需求后，我们帮你生成可直接投放的脚本结构与话术
-              </p>
-            </div>
-
-            <div className="text-center space-y-6">
-              <div className="h-20 w-20 bg-white text-black rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
-                2
-              </div>
-              <h3 className="text-xl font-bold text-white">AI 选题与脚本拆解</h3>
-              <p className="text-gray-300">
-                系统读取你的业务目标，生成匹配的裂变策略与节奏
-              </p>
-            </div>
-
-            <div className="text-center space-y-6">
-              <div className="h-20 w-20 bg-white text-black rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
-                3
-              </div>
-              <h3 className="text-xl font-bold text-white">一键落地并持续优化</h3>
-              <p className="text-gray-300">
-                把脚本生成、投放复盘串起来，让效果越来越稳
+            <div className="rounded-lg border border-white/10 bg-white/[0.04] p-6">
+              <Boxes className="mb-5 h-8 w-8 text-fuchsia-200" />
+              <p className="text-lg leading-9 text-neutral-200">
+                当前阶段先生成游戏概念视频和素材包，后续将逐步支持可交互 Demo、Unity/Godot/Unreal 导出、虚拟场景生成、数字孪生和 AI 仿真环境。
               </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* CTA Section */}
-      <section className="relative py-24 overflow-hidden">
-        <AnimatedGradientBackground
-          Breathing={true}
-          gradientColors={["#0A0A0A", "#2979FF", "#FF80AB", "#FF6D00", "#FFD600", "#00E676", "#3D5AFE"]}
-          gradientStops={[35, 50, 60, 70, 80, 90, 100]}
-        />
-        <div className="relative z-10 container mx-auto px-4 text-center">
-          <div className="max-w-3xl mx-auto space-y-8">
-            <div className="relative h-32 w-full flex flex-col items-center justify-center">
-              <div className="w-full absolute inset-0">
-                <SparklesCore
-                  id="ctasparticles"
-                  background="transparent"
-                  minSize={0.6}
-                  maxSize={1.4}
-                  particleDensity={100}
-                  className="w-full h-full"
-                  particleColor="#FFFFFF"
-                  speed={0.8}
-                />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-center bg-clip-text text-transparent bg-gradient-to-b from-neutral-50 to-neutral-400 relative z-20 text-balance">
-                现在扫码，AI 立刻帮你出爆款脚本
-              </h2>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" variant="secondary" className="bg-white text-black hover:bg-gray-100">
-                立即开始生成
-                <ArrowRight className="ml-2 h-4 w-4" />
+        <section className="bg-[#080a10] py-24">
+          <div className="mx-auto max-w-4xl px-4 text-center lg:px-6">
+            <Clapperboard className="mx-auto mb-6 h-10 w-10 text-cyan-200" />
+            <h2 className="text-3xl font-semibold md:text-5xl">把你的游戏想法变成第一版视觉原型</h2>
+            <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
+              <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
+                <Link href="/submit">提交游戏想法</Link>
               </Button>
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 bg-transparent">
-                添加 AI 客服微信咨询
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="/login">登录 / 注册</Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="rounded-md border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="#pricing">查看价格</Link>
               </Button>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer id="contact" className="relative py-20 bg-black border-t border-white/10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/95 to-black/90" />
-
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="grid lg:grid-cols-4 md:grid-cols-2 gap-12">
-            {/* Company Info */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-2xl font-bold text-white">AI 工具集平台</h3>
-                <p className="text-gray-300 leading-relaxed">
-                  用智能自动化与专业 AI 能力，帮你快速裂变引流与变现。
-                </p>
-              </div>
-
-              <div className="flex space-x-4">
-                <a
-                  href="#"
-                  className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <Linkedin className="h-5 w-5" />
-                </a>
-                <a
-                  href="#"
-                  className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <Twitter className="h-5 w-5" />
-                </a>
-                <a
-                  href="#"
-                  className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-all duration-300"
-                >
-                  <Facebook className="h-5 w-5" />
-                </a>
-              </div>
-            </div>
-
-            {/* Services */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">平台功能</h4>
-              <ul className="space-y-3">
-                {[
-                  "AI 引流脚本生成",
-                  "裂变流程自动化",
-                  "私域对接即用",
-                  "爆款洞察与优化",
-                  "定制脚本模板服务",
-                ].map((service) => (
-                  <li key={service}>
-                    <a
-                      href="#services"
-                      className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
-                    >
-                      <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      {service}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Company */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">平台</h4>
-              <ul className="space-y-3">
-                {[
-                  { name: "关于我们", href: "#" },
-                  { name: "爆款案例", href: "#testimonials" },
-                  { name: "增长干货", href: "#" },
-                  { name: "加入我们", href: "#" },
-                  { name: "联系我们", href: "#contact" },
-                ].map((item) => (
-                  <li key={item.name}>
-                    <a
-                      href={item.href}
-                      className="text-gray-400 hover:text-white transition-colors duration-300 flex items-center group"
-                    >
-                      <ArrowRight className="h-3 w-3 mr-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                      {item.name}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Contact Info */}
-            <div className="space-y-6">
-              <h4 className="text-lg font-semibold text-white">联系 AI 客服</h4>
-              <div className="space-y-4">
-                <div className="flex items-center space-x-3 text-gray-300">
-                  <div className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
-                    <Mail className="h-4 w-4" />
-                  </div>
-                  <a href="mailto:hello@aiagency.com" className="hover:text-white transition-colors duration-300">
-                    hello@aiagency.com
-                  </a>
-                </div>
-
-                <div className="flex items-center space-x-3 text-gray-300">
-                  <div className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
-                    <Phone className="h-4 w-4" />
-                  </div>
-                  <a href="tel:+15551234567" className="hover:text-white transition-colors duration-300">
-                    (555) 123-4567
-                  </a>
-                </div>
-
-                <div className="flex items-center space-x-3 text-gray-300">
-                  <div className="p-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-lg">
-                    <MapPin className="h-4 w-4" />
-                  </div>
-                  <span>中国运营中心（以客服为准）</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Section */}
-          <div className="border-t border-white/10 mt-16 pt-8">
-            <div className="flex flex-col lg:flex-row justify-between items-center space-y-4 lg:space-y-0">
-              <p className="text-gray-400 text-center lg:text-left">© 2024 AI 工具集平台 版权所有</p>
-
-              <div className="flex flex-wrap justify-center lg:justify-end space-x-8">
-                <a href="/privacy" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
-                  隐私政策
-                </a>
-                <a href="/terms" className="text-gray-400 hover:text-white transition-colors duration-300 text-sm">
-                  服务条款
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
+        </section>
+      </main>
     </div>
   )
 }

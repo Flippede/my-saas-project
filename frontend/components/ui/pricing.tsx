@@ -1,11 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { motion } from "framer-motion"
 import { Check, Star } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 type PricingPlan = {
   name?: string
@@ -19,6 +18,34 @@ type PricingPlan = {
   isPopular?: boolean
 }
 
+const defaultPlans: PricingPlan[] = [
+  {
+    name: "基础概念包",
+    price: "199-499 元",
+    description: "适合快速验证一个游戏脑洞。",
+    features: ["游戏名称", "世界观", "角色图", "场景图", "UI 风格图"],
+    buttonText: "提交需求",
+    href: "/submit",
+  },
+  {
+    name: "AI 游戏宣传片",
+    price: "999-2999 元",
+    description: "适合短视频传播和项目预热。",
+    features: ["15-30 秒类游戏宣传片", "竖屏版", "横屏版", "主视觉图"],
+    buttonText: "提交需求",
+    href: "/submit",
+    isPopular: true,
+  },
+  {
+    name: "游戏 Pitch 包",
+    price: "2999-9999 元",
+    description: "适合招商、融资和团队立项。",
+    features: ["宣传片", "设定文档", "角色场景", "UI", "项目介绍页", "招商展示材料"],
+    buttonText: "提交需求",
+    href: "/submit",
+  },
+]
+
 export function Pricing({
   title,
   description,
@@ -28,123 +55,55 @@ export function Pricing({
   description?: string
   plans?: PricingPlan[]
 }) {
-  // MVP：静态码收单 + AI 自动发卡
-  // 这里按“档位固定价格 + 统一 CTA 跳转 /checkout”来渲染，忽略传入的价格/按钮文案。
-  const tierCards = [
-    {
-      tierId: "starter",
-      label: plans?.[0]?.name ?? "入门版",
-      priceBig: "￥49",
-      popular: false,
-      features:
-        [
-          "一键生成短视频引流脚本",
-          "基础裂变流程模板（3步）",
-          "私域开场/追问话术库",
-          "生成结果可直接复制投放",
-          "30 天无忧保障",
-        ] as const,
-    },
-    {
-      tierId: "professional",
-      label: plans?.[1]?.name ?? "专业版",
-      priceBig: "￥99",
-      popular: true,
-      features:
-        [
-          "无限次调用大模型生成",
-          "线索筛选 + 对话追问脚本",
-          "多版本脚本 A/B 测试建议",
-          "私域群答疑要点（按周期）",
-          "更快跑出转化结果",
-        ] as const,
-    },
-    {
-      tierId: "enterprise",
-      label: plans?.[2]?.name ?? "旗舰版",
-      priceBig: "￥299",
-      popular: false,
-      features:
-        [
-          "专属私域社群答疑（高优先）",
-          "多场景脚本包（短视频/直播）",
-          "业务主题定制模板",
-          "全流程复盘与策略迭代",
-          "适合长期持续投放团队",
-        ] as const,
-    },
-  ] as const
+  const tierCards = plans?.length ? plans : defaultPlans
 
   return (
     <div className="container py-20">
-      <div className="text-center space-y-4 mb-12">
-        <h2 className="text-4xl font-bold tracking-tight sm:text-5xl text-white">
-          {title ?? "MVP 定价方案"}
-        </h2>
-        {description ? (
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto whitespace-pre-line">
-            {description}
-          </p>
-        ) : null}
+      <div className="mb-12 space-y-4 text-center">
+        <h2 className="text-4xl font-bold tracking-normal text-white sm:text-5xl">{title ?? "会员 / 服务套餐"}</h2>
+        {description ? <p className="mx-auto max-w-2xl text-xl text-neutral-300">{description}</p> : null}
       </div>
 
       <div className="mx-auto max-w-7xl">
-        <div className="grid gap-6 place-content-center md:grid-cols-3">
-          {tierCards.map((tier, idx) => (
-            <motion.div
-              key={tier.tierId}
-              initial={{ y: 30, opacity: 1 }}
-              whileInView={{ y: -10, opacity: 1, scale: tier.popular ? 1.03 : 1 }}
-              viewport={{ once: true }}
-              transition={{
-                duration: 1.1,
-                type: "spring",
-                stiffness: 120,
-                damping: 22,
-                delay: 0.15 + idx * 0.12,
-              }}
+        <div className="grid gap-5 md:grid-cols-3">
+          {tierCards.map((tier) => (
+            <div
+              key={tier.name}
               className={cn(
-                "relative rounded-2xl p-6 text-center flex flex-col",
-                tier.popular
-                  ? "border-2 border-blue-400 bg-white/10 shadow-xl z-10"
-                  : "border border-white/15 bg-white/5",
+                "relative flex flex-col rounded-lg p-6 text-center",
+                tier.isPopular
+                  ? "border border-cyan-200/45 bg-cyan-200/[0.08] shadow-[0_0_36px_rgba(34,211,238,0.14)]"
+                  : "border border-white/12 bg-white/[0.04]",
               )}
             >
-              {tier.popular ? (
-                <div className="absolute -top-3 right-4 bg-blue-500 py-0.5 px-2 rounded-bl-xl rounded-tr-xl flex items-center">
-                  <Star className="text-white h-4 w-4 fill-current" />
-                  <span className="text-white ml-1 font-sans font-semibold">主推</span>
+              {tier.isPopular ? (
+                <div className="absolute right-4 top-4 flex items-center rounded bg-cyan-200 px-2 py-1 text-xs font-semibold text-black">
+                  <Star className="mr-1 h-3.5 w-3.5 fill-current" />
+                  推荐
                 </div>
               ) : null}
 
-              <div className="flex-1 flex flex-col">
-                <p className="text-base font-semibold text-gray-300">{tier.label}</p>
+              <div className="flex flex-1 flex-col">
+                <p className="text-lg font-semibold text-white">{tier.name}</p>
+                <div className="mt-5 text-3xl font-bold tracking-normal text-cyan-100">{tier.price}</div>
+                {tier.description ? <p className="mt-4 text-sm leading-6 text-neutral-300">{tier.description}</p> : null}
 
-                <div className="mt-6 flex items-center justify-center gap-x-2">
-                  <span className="text-5xl font-bold tracking-tight text-white transition-all duration-500 ease-out">
-                    {tier.priceBig}
-                  </span>
-                  <span className="text-sm font-semibold leading-6 tracking-wide text-gray-300">
-                    / 月
-                  </span>
-                </div>
-
-                <ul className="mt-6 gap-3 flex flex-col">
-                  {tier.features.map((feature) => (
+                <ul className="mt-6 flex flex-col gap-3">
+                  {(tier.features ?? []).map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
-                      <Check className="h-4 w-4 text-blue-400 mt-1 flex-shrink-0" />
-                      <span className="text-left text-gray-200">{feature}</span>
+                      <Check className="mt-1 h-4 w-4 shrink-0 text-cyan-200" />
+                      <span className="text-left text-sm text-neutral-200">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
                 <div className="mt-8">
-                  <Button asChild size="lg" className="w-full bg-white text-black hover:bg-neutral-200">
-                    <Link href="/checkout">立即开通</Link>
+                  <Button asChild size="lg" className="w-full rounded-md bg-white text-black hover:bg-neutral-200">
+                    <Link href={tier.href ?? "/submit"}>{tier.buttonText ?? "提交需求"}</Link>
                   </Button>
                 </div>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>

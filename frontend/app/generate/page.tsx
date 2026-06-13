@@ -116,7 +116,7 @@ export default function GeneratePage() {
       <header className="border-b border-white/10 bg-neutral-900/70 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center gap-3 px-4 py-4">
           <Clapperboard className="h-6 w-6 text-blue-400" />
-          <h1 className="text-xl font-semibold tracking-tight">AI Storyboard X 工作台</h1>
+          <h1 className="text-xl font-semibold tracking-tight">造境 AI 分镜工作台</h1>
         </div>
       </header>
 

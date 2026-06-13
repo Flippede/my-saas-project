@@ -18,7 +18,7 @@ from urllib import request as urlrequest
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
@@ -103,6 +103,11 @@ WECHAT_PRIVATE_KEY = _read_file(WECHAT_PRIVATE_KEY_PATH) or _read_pem_env_any(
 WECHAT_PLATFORM_PUBLIC_KEY = _read_file(WECHAT_PLATFORM_PUBLIC_KEY_PATH) or _read_pem_env_any(
     ["WECHAT_PLATFORM_PUBLIC_KEY", "WECHAT_PAY_PLATFORM_PUBLIC_KEY", "WX_PLATFORM_PUBLIC_KEY"]
 )
+ADMIN_OPENIDS = {
+    item.strip()
+    for item in _read_env("ADMIN_OPENIDS").split(",")
+    if item.strip()
+}
 
 
 def get_db_conn() -> sqlite3.Connection:
@@ -337,6 +342,33 @@ def init_db() -> None:
             )
             """
         )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS game_submissions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            game_name TEXT,
+            game_type TEXT,
+            art_style TEXT,
+            protagonist TEXT,
+            enemy_boss TEXT,
+            scene_setting TEXT,
+            core_gameplay TEXT,
+            deliverables_json TEXT NOT NULL DEFAULT '[]',
+            budget_range TEXT,
+            contact TEXT,
+            notes TEXT,
+            admin_note TEXT,
+            status TEXT NOT NULL DEFAULT 'new',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    cur.execute("PRAGMA table_info(game_submissions)")
+    submission_cols = [row[1] for row in cur.fetchall()]
+    if "admin_note" not in submission_cols:
+        cur.execute("ALTER TABLE game_submissions ADD COLUMN admin_note TEXT")
     cur.execute("PRAGMA table_info(tokens)")
     cols = [row[1] for row in cur.fetchall()]
     if "order_id" not in cols:
@@ -698,6 +730,117 @@ class ToolsDispatchRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
+class GameSubmissionRequest(BaseModel):
+    game_name: Optional[str] = ""
+    game_type: Optional[str] = ""
+    art_style: Optional[str] = ""
+    protagonist: Optional[str] = ""
+    enemy_boss: Optional[str] = ""
+    scene_setting: Optional[str] = ""
+    core_gameplay: Optional[str] = ""
+    deliverables: List[str] = Field(default_factory=list)
+    budget_range: Optional[str] = ""
+    contact: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+class AdminGameSubmissionUpdateRequest(BaseModel):
+    status: Optional[str] = None
+    admin_note: Optional[str] = None
+
+
+ALLOWED_GAME_SUBMISSION_STATUSES = {
+    "new",
+    "reviewing",
+    "quoted",
+    "in_progress",
+    "delivered",
+    "cancelled",
+}
+
+
+def _clean_text(value: Optional[str]) -> str:
+    return str(value or "").strip()
+
+
+def _get_token_identity(token: str) -> Optional[dict]:
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT openid FROM tokens WHERE token = ? AND status = 1", (token,))
+    token_row = cur.fetchone()
+    if not token_row or not token_row["openid"]:
+        conn.close()
+        return None
+
+    openid = token_row["openid"]
+    cur.execute("SELECT id FROM users WHERE username = ?", (openid,))
+    user_row = cur.fetchone()
+    conn.close()
+    if not user_row:
+        return None
+
+    return {
+        "user_id": int(user_row["id"]),
+        "openid": openid,
+    }
+
+
+def _get_user_id_for_token(token: str) -> Optional[int]:
+    identity = _get_token_identity(token)
+    if not identity:
+        return None
+    return int(identity["user_id"])
+
+
+def _get_optional_user_id_from_authorization(authorization: Optional[str]) -> Optional[int]:
+    if not authorization:
+        return None
+
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
+        return None
+
+    token = parts[1].strip()
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT expire_date, status FROM tokens WHERE token = ?", (token,))
+    row = cur.fetchone()
+    conn.close()
+    if not row or int(row["status"]) != 1 or now_utc() >= parse_iso_time(row["expire_date"]):
+        return None
+
+    return _get_user_id_for_token(token)
+
+
+def _format_game_submission(row: sqlite3.Row) -> dict:
+    try:
+        deliverables = json.loads(row["deliverables_json"] or "[]")
+    except json.JSONDecodeError:
+        deliverables = []
+    if not isinstance(deliverables, list):
+        deliverables = []
+
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "game_name": row["game_name"] or "",
+        "game_type": row["game_type"] or "",
+        "art_style": row["art_style"] or "",
+        "protagonist": row["protagonist"] or "",
+        "enemy_boss": row["enemy_boss"] or "",
+        "scene_setting": row["scene_setting"] or "",
+        "core_gameplay": row["core_gameplay"] or "",
+        "deliverables": deliverables,
+        "budget_range": row["budget_range"] or "",
+        "contact": row["contact"] or "",
+        "notes": row["notes"] or "",
+        "admin_note": row["admin_note"] or "",
+        "status": row["status"] or "new",
+        "created_at": row["created_at"],
+        "updated_at": row["updated_at"],
+    }
+
+
 @app.get("/api/payment/config-check")
 async def payment_config_check():
     return get_wechat_payment_config_status()
@@ -843,6 +986,15 @@ def verify_token_from_header(request: Request, authorization: Optional[str] = He
     if now_utc() >= parse_iso_time(row["expire_date"]):
         raise HTTPException(status_code=403, detail="Token 已过期")
     return token
+
+
+def require_admin_token(token: str = Depends(verify_token_from_header)) -> dict:
+    identity = _get_token_identity(token)
+    if not identity:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+    if not ADMIN_OPENIDS or identity["openid"] not in ADMIN_OPENIDS:
+        raise HTTPException(status_code=403, detail="无权限访问需求管理后台")
+    return identity
 
 
 @app.post("/api/v1/payment/create", response_model=PaymentCreateResponse)
@@ -1042,6 +1194,232 @@ async def payment_status(order_id: str):
         "vip_active": payload["vip_active"],
         "redirect_url": payload["redirect_url"],
     }
+
+
+@app.post("/api/v1/game-submissions")
+async def create_game_submission(
+    body: GameSubmissionRequest,
+    authorization: Optional[str] = Header(default=None),
+):
+    contact = _clean_text(body.contact)
+    game_type = _clean_text(body.game_type)
+    art_style = _clean_text(body.art_style)
+    core_gameplay = _clean_text(body.core_gameplay)
+    protagonist = _clean_text(body.protagonist)
+    scene_setting = _clean_text(body.scene_setting)
+
+    if not contact:
+        raise HTTPException(status_code=400, detail="请填写联系方式，方便我们与你确认需求。")
+
+    if not any([game_type, art_style, core_gameplay, protagonist, scene_setting]):
+        raise HTTPException(status_code=400, detail="请至少填写游戏类型、画风、核心玩法或角色场景设定。")
+
+    deliverables = []
+    for item in body.deliverables:
+        value = _clean_text(item)
+        if value and value not in deliverables:
+            deliverables.append(value)
+
+    now = now_utc().isoformat()
+    user_id = _get_optional_user_id_from_authorization(authorization)
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO game_submissions (
+            user_id, game_name, game_type, art_style, protagonist, enemy_boss,
+            scene_setting, core_gameplay, deliverables_json, budget_range,
+            contact, notes, status, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?, ?)
+        """,
+        (
+            user_id,
+            _clean_text(body.game_name),
+            game_type,
+            art_style,
+            protagonist,
+            _clean_text(body.enemy_boss),
+            scene_setting,
+            core_gameplay,
+            json.dumps(deliverables, ensure_ascii=False),
+            _clean_text(body.budget_range),
+            contact,
+            _clean_text(body.notes),
+            now,
+            now,
+        ),
+    )
+    submission_id = int(cur.lastrowid)
+    conn.commit()
+    conn.close()
+
+    return {
+        "id": submission_id,
+        "status": "new",
+        "user_id": user_id,
+    }
+
+
+@app.get("/api/v1/my-game-submissions")
+async def get_my_game_submissions(token: str = Depends(verify_token_from_header)):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        SELECT *
+        FROM game_submissions
+        WHERE user_id = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (user_id,),
+    )
+    rows = cur.fetchall()
+    conn.close()
+
+    return {
+        "items": [_format_game_submission(row) for row in rows],
+    }
+
+
+@app.get("/api/debug/my-openid")
+async def debug_my_openid(token: str = Depends(verify_token_from_header)):
+    # TODO: 拿到 openid 后删除。
+    identity = _get_token_identity(token)
+    openid = str(identity["openid"]).strip() if identity and identity.get("openid") else ""
+
+    if not openid:
+        conn = get_db_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT openid FROM tokens WHERE token = ? AND status = 1", (token,))
+        token_row = cur.fetchone()
+        conn.close()
+        openid = str(token_row["openid"]).strip() if token_row and token_row["openid"] else ""
+
+    if not openid:
+        raise HTTPException(status_code=404, detail="当前登录用户没有绑定 openid")
+
+    return {"openid": openid}
+
+
+@app.get("/api/v1/admin/me")
+async def admin_me(token: str = Depends(verify_token_from_header)):
+    identity = _get_token_identity(token)
+    is_admin = bool(identity and ADMIN_OPENIDS and identity["openid"] in ADMIN_OPENIDS)
+    return {"is_admin": is_admin}
+
+
+@app.get("/api/v1/admin/game-submissions")
+async def admin_list_game_submissions(
+    status: Optional[str] = None,
+    limit: int = Query(default=50, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    _admin: dict = Depends(require_admin_token),
+):
+    normalized_status = _clean_text(status)
+    if normalized_status and normalized_status not in ALLOWED_GAME_SUBMISSION_STATUSES:
+        raise HTTPException(status_code=400, detail="无效的需求状态")
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+
+    where_sql = ""
+    params: list[Any] = []
+    if normalized_status:
+        where_sql = "WHERE status = ?"
+        params.append(normalized_status)
+
+    cur.execute(f"SELECT COUNT(*) AS total FROM game_submissions {where_sql}", params)
+    total_row = cur.fetchone()
+    total = int(total_row["total"] if total_row else 0)
+
+    cur.execute(
+        f"""
+        SELECT *
+        FROM game_submissions
+        {where_sql}
+        ORDER BY created_at DESC, id DESC
+        LIMIT ? OFFSET ?
+        """,
+        [*params, limit, offset],
+    )
+    rows = cur.fetchall()
+    conn.close()
+
+    return {
+        "items": [_format_game_submission(row) for row in rows],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@app.get("/api/v1/admin/game-submissions/{submission_id}")
+async def admin_get_game_submission(
+    submission_id: int,
+    _admin: dict = Depends(require_admin_token),
+):
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM game_submissions WHERE id = ?", (submission_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="需求不存在")
+
+    return _format_game_submission(row)
+
+
+@app.patch("/api/v1/admin/game-submissions/{submission_id}")
+async def admin_update_game_submission(
+    submission_id: int,
+    body: AdminGameSubmissionUpdateRequest,
+    _admin: dict = Depends(require_admin_token),
+):
+    updates = []
+    params: list[Any] = []
+
+    if body.status is not None:
+        status = _clean_text(body.status)
+        if status not in ALLOWED_GAME_SUBMISSION_STATUSES:
+            raise HTTPException(status_code=400, detail="无效的需求状态")
+        updates.append("status = ?")
+        params.append(status)
+
+    if body.admin_note is not None:
+        updates.append("admin_note = ?")
+        params.append(_clean_text(body.admin_note))
+
+    if not updates:
+        raise HTTPException(status_code=400, detail="没有可更新的字段")
+
+    updates.append("updated_at = ?")
+    params.append(now_utc().isoformat())
+    params.append(submission_id)
+
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM game_submissions WHERE id = ?", (submission_id,))
+    if not cur.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="需求不存在")
+
+    cur.execute(
+        f"UPDATE game_submissions SET {', '.join(updates)} WHERE id = ?",
+        params,
+    )
+    conn.commit()
+    cur.execute("SELECT * FROM game_submissions WHERE id = ?", (submission_id,))
+    row = cur.fetchone()
+    conn.close()
+
+    return _format_game_submission(row)
 
 
 @app.post("/api/v1/tools")

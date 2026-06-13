@@ -7,8 +7,8 @@ import { AppHeader } from "@/components/app-header"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "AI 爆款脚本引擎 - AI 工具集平台",
-  description: "面向短视频增长团队的 AI 工具平台，支持登录、支付、脚本生成与分镜工作台。",
+  title: "造境 AI - 一句话生成你的游戏世界",
+  description: "AI 游戏原型生成平台，帮助用户生成类游戏宣传片、角色、场景、UI、2D/3D 素材包和可交互 Demo。",
   generator: "v0.app",
   icons: {
     icon: [

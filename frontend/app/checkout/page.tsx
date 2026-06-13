@@ -32,13 +32,13 @@ export default function CheckoutPage() {
 
   const handlePaymentSuccess = (rawToken?: string) => {
     setShowPayModal(false)
-    setStatusText("支付成功，正在跳转到分镜工作台...")
+    setStatusText("支付成功，正在跳转到用户工作台...")
 
     if (rawToken?.trim()) {
       storeSession(rawToken)
     }
 
-    router.push("/generate")
+    router.push("/dashboard")
   }
 
   useEffect(() => {
@@ -146,8 +146,8 @@ export default function CheckoutPage() {
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-900 shadow-2xl">
           <div className="p-6">
             <div className="space-y-3 text-center">
-              <h1 className="text-3xl font-bold tracking-tight text-white">AI Storyboard X</h1>
-              <p className="text-neutral-300">专业版订阅</p>
+              <h1 className="text-3xl font-bold tracking-tight text-white">造境 AI</h1>
+              <p className="text-neutral-300">会员 / 服务套餐</p>
               <p className="text-4xl font-bold text-white">¥49 / 月</p>
 
               <button
@@ -155,7 +155,7 @@ export default function CheckoutPage() {
                 disabled={createLoading}
                 className="mt-4 h-11 w-full rounded-xl bg-blue-600 px-5 text-sm font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {createLoading ? "创建订单中..." : "订阅专业版"}
+                {createLoading ? "创建订单中..." : "开通会员"}
               </button>
             </div>
           </div>
