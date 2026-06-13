@@ -7,7 +7,10 @@ frontend/*.log
 frontend/*.tsbuildinfo
 
 backend/__pycache__/
+backend/.venv/
+backend/**/__pycache__/
 backend/.env*
+!backend/.env.example
 backend/*.log
 backend/*.db
 

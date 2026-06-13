@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { QRCodeCanvas } from "qrcode.react"
 
 import {
+  AUTH_STATE_CHANGED_EVENT,
   buildApiUrl,
   clearSession,
   formatAmount,
@@ -14,7 +15,7 @@ import {
 } from "@/lib/app-config"
 import { createOrder } from "@/lib/payment"
 
-const USER_INFO_REFRESH_EVENT = "xcc:user-info-refresh"
+const USER_INFO_REFRESH_EVENT = AUTH_STATE_CHANGED_EVENT
 
 type UserInfoResponse = {
   user_id?: string | number
@@ -24,10 +25,17 @@ type UserInfoResponse = {
   message?: string
 }
 
+type CurrentUserResponse = UserInfoResponse & {
+  is_logged_in?: boolean
+  user?: UserInfoResponse | null
+}
+
 type PaymentStatusResponse = {
   status?: string
   token?: string
   message?: string
+  vip_active?: boolean
+  redirect_url?: string
 }
 
 export function triggerUserInfoRefresh() {
@@ -50,11 +58,26 @@ export function AppHeader() {
   const [showPaySuccessToast, setShowPaySuccessToast] = useState(false)
 
   useEffect(() => {
+    const clearLoginSuccessParam = () => {
+      if (typeof window === "undefined") {
+        return
+      }
+
+      const url = new URL(window.location.href)
+      if (url.searchParams.get("login") !== "success") {
+        return
+      }
+
+      url.searchParams.delete("login")
+      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`)
+    }
+
     const loadUserInfo = async () => {
       const token = getStoredToken()
       if (!token) {
         setLoggedIn(false)
         setUserInfo(null)
+        clearLoginSuccessParam()
         return
       }
 
@@ -62,27 +85,38 @@ export function AppHeader() {
       setLoadingUser(true)
 
       try {
-        const response = await fetch(buildApiUrl("/api/v1/user/info"), {
+        const response = await fetch(buildApiUrl("/api/me"), {
+          cache: "no-store",
+          credentials: "include",
           headers: {
             Authorization: `Bearer ${token}`,
           },
         })
-        const data = (await response.json()) as UserInfoResponse
+        const data = (await response.json()) as CurrentUserResponse
 
         if (!response.ok) {
           throw new Error(data?.message || "获取用户信息失败")
         }
 
+        const currentUser = data?.user || data
+        if (data?.is_logged_in === false) {
+          setLoggedIn(false)
+          setUserInfo(null)
+          return
+        }
+
         setUserInfo({
-          user_id: data?.user_id || "",
-          username: data?.username || "AI 创作者",
-          is_vip: data?.is_vip ?? 0,
-          expire_at: data?.expire_at || "",
+          user_id: currentUser?.user_id || "",
+          username: currentUser?.username || "AI 创作者",
+          is_vip: currentUser?.is_vip ?? 0,
+          expire_at: currentUser?.expire_at || "",
         })
 
-        if (typeof window !== "undefined" && data?.user_id !== undefined && data?.user_id !== null) {
-          localStorage.setItem(USER_ID_KEY, String(data.user_id))
+        if (typeof window !== "undefined" && currentUser?.user_id !== undefined && currentUser?.user_id !== null) {
+          localStorage.setItem(USER_ID_KEY, String(currentUser.user_id))
         }
+
+        clearLoginSuccessParam()
       } catch {
         setUserInfo({
           user_id: "",
@@ -97,9 +131,15 @@ export function AppHeader() {
 
     void loadUserInfo()
     window.addEventListener(USER_INFO_REFRESH_EVENT, loadUserInfo)
+    window.addEventListener("focus", loadUserInfo)
+    window.addEventListener("pageshow", loadUserInfo)
+    window.addEventListener("storage", loadUserInfo)
 
     return () => {
       window.removeEventListener(USER_INFO_REFRESH_EVENT, loadUserInfo)
+      window.removeEventListener("focus", loadUserInfo)
+      window.removeEventListener("pageshow", loadUserInfo)
+      window.removeEventListener("storage", loadUserInfo)
     }
   }, [])
 
@@ -155,7 +195,7 @@ export function AppHeader() {
     const pollTimer = setInterval(async () => {
       try {
         const response = await fetch(
-          buildApiUrl(`/api/v1/payment/status?order_id=${encodeURIComponent(paymentOrderId)}`),
+          buildApiUrl(`/api/payment/order-status?order_id=${encodeURIComponent(paymentOrderId)}`),
         )
         const data = (await response.json()) as PaymentStatusResponse
 
@@ -163,7 +203,8 @@ export function AppHeader() {
           return
         }
 
-        if ((data?.status || "").toLowerCase() === "success") {
+        const normalizedStatus = (data?.status || "").toLowerCase()
+        if (normalizedStatus === "paid" || normalizedStatus === "success") {
           clearInterval(pollTimer)
 
           if (data?.token) {

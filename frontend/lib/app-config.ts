@@ -1,5 +1,6 @@
 export const AUTH_TOKEN_KEY = "xcc_token"
 export const USER_ID_KEY = "xcc_user_id"
+export const AUTH_STATE_CHANGED_EVENT = "xcc:auth-state-changed"
 
 const configuredApiBase = (process.env.NEXT_PUBLIC_API_BASE || "").replace(/\/$/, "")
 
@@ -38,6 +39,8 @@ export function storeSession(token: string, userId?: string | number | null) {
   if (userId !== undefined && userId !== null && String(userId).trim()) {
     localStorage.setItem(USER_ID_KEY, String(userId))
   }
+
+  window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT))
 }
 
 export function clearSession() {
@@ -47,6 +50,7 @@ export function clearSession() {
 
   localStorage.removeItem(AUTH_TOKEN_KEY)
   localStorage.removeItem(USER_ID_KEY)
+  window.dispatchEvent(new Event(AUTH_STATE_CHANGED_EVENT))
 }
 
 export function formatAmount(amount?: string) {

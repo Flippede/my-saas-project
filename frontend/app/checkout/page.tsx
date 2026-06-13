@@ -12,7 +12,11 @@ type PaymentStatusResponse = {
   status?: string
   token?: string
   message?: string
+  vip_active?: boolean
+  redirect_url?: string
 }
+
+const WECHAT_PAY_NOT_CONFIGURED_MESSAGE = "微信支付暂未配置，请联系管理员完成商户配置。"
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -48,7 +52,7 @@ export default function CheckoutPage() {
     const checkPaymentStatus = async () => {
       try {
         const response = await fetch(
-          buildApiUrl(`/api/v1/payment/status?order_id=${encodeURIComponent(orderId)}`),
+          buildApiUrl(`/api/payment/order-status?order_id=${encodeURIComponent(orderId)}`),
         )
         const data = (await response.json()) as PaymentStatusResponse
 
@@ -56,7 +60,8 @@ export default function CheckoutPage() {
           return
         }
 
-        if ((data.status || "").toLowerCase() === "success") {
+        const normalizedStatus = (data.status || "").toLowerCase()
+        if (normalizedStatus === "paid" || normalizedStatus === "success") {
           handlePaymentSuccess(data.token)
         }
       } catch {
@@ -116,7 +121,11 @@ export default function CheckoutPage() {
       setCountdown(120)
       setStatusText("请使用微信扫码完成支付")
     } catch (createError) {
-      const message = createError instanceof Error ? createError.message : "支付请求失败，请稍后再试。"
+      const rawMessage = createError instanceof Error ? createError.message : "支付请求失败，请稍后再试。"
+      const message =
+        rawMessage.includes("微信支付配置") || rawMessage.includes("WECHAT_") || rawMessage.includes("HTTP 500")
+          ? WECHAT_PAY_NOT_CONFIGURED_MESSAGE
+          : rawMessage
       setError(message)
       setStatusText("支付创建失败")
     } finally {

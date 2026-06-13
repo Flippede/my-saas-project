@@ -10,7 +10,7 @@ import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, Optional
+from typing import Any, List, Optional
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
@@ -18,7 +18,7 @@ from urllib import request as urlrequest
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
@@ -30,7 +30,30 @@ def _read_env(name: str, default: str = "") -> str:
     return os.getenv(name, default).strip()
 
 
-def _parse_cors_origins() -> list[str]:
+def _read_env_any(names: List[str], default: str = "") -> str:
+    for name in names:
+        value = _read_env(name)
+        if value:
+            return value
+    return default
+
+
+def _read_file(path: str) -> str:
+    normalized_path = str(path or "").strip()
+    if not normalized_path:
+        return ""
+    try:
+        with open(normalized_path, "r", encoding="utf-8") as file_obj:
+            return file_obj.read().strip()
+    except OSError:
+        return ""
+
+
+def _read_pem_env_any(names: List[str]) -> str:
+    return _read_env_any(names).replace("\\n", "\n")
+
+
+def _parse_cors_origins() -> List[str]:
     raw_origins = _read_env(
         "CORS_ALLOW_ORIGINS",
         "http://127.0.0.1:3000,http://localhost:3000,https://x-creator.cc",
@@ -51,19 +74,35 @@ app.add_middleware(
 )
 
 DB_PATH = _read_env("DB_PATH", "x_creator.db")
-FIXED_AMOUNT = Decimal(_read_env("FIXED_AMOUNT", "49.00"))
-WECHAT_API_BASE = _read_env("WECHAT_API_BASE", "https://api.mch.weixin.qq.com")
-WECHAT_NOTIFY_URL = _read_env("WECHAT_NOTIFY_URL", "https://x-creator.cc/api/v1/wechat/webhook")
+FIXED_AMOUNT = Decimal(_read_env_any(["FIXED_AMOUNT", "PAY_AMOUNT"], "49.00"))
+WECHAT_API_BASE = _read_env_any(["WECHAT_API_BASE", "WECHAT_PAY_API_BASE"], "https://api.mch.weixin.qq.com")
+WECHAT_NOTIFY_URL = _read_env_any(
+    ["WECHAT_NOTIFY_URL", "WECHAT_PAY_NOTIFY_URL", "WX_NOTIFY_URL"],
+    "https://x-creator.cc/api/v1/wechat/webhook",
+)
 
 # 微信支付 V3 配置（占位）
-WECHAT_APPID = _read_env("WECHAT_APPID")
-WECHAT_MCHID = _read_env("WECHAT_MCHID")
-WECHAT_V3_KEY = _read_env("WECHAT_V3_KEY")
-WECHAT_CERT_SERIAL_NO = _read_env("WECHAT_CERT_SERIAL_NO")
+WECHAT_APPID = _read_env_any(["WECHAT_APPID", "WECHAT_PAY_APPID", "WX_APPID", "APPID", "WECHAT_MP_APPID"])
+WECHAT_MCHID = _read_env_any(["WECHAT_MCHID", "WECHAT_PAY_MCHID", "WX_MCHID", "MCH_ID", "MCHID"])
+WECHAT_V3_KEY = _read_env_any(["WECHAT_V3_KEY", "WECHAT_API_V3_KEY", "WECHAT_PAY_V3_KEY", "WX_API_V3_KEY", "API_V3_KEY"])
+WECHAT_CERT_SERIAL_NO = _read_env_any(
+    ["WECHAT_CERT_SERIAL_NO", "WECHAT_PAY_CERT_SERIAL_NO", "WX_CERT_SERIAL_NO", "MCH_CERT_SERIAL_NO"]
+)
 WECHAT_MP_APPID = _read_env("WECHAT_MP_APPID", WECHAT_APPID)
 WECHAT_MP_APPSECRET = _read_env("WECHAT_MP_APPSECRET")
-WECHAT_PRIVATE_KEY = _read_env("WECHAT_PRIVATE_KEY")
-WECHAT_PLATFORM_PUBLIC_KEY = _read_env("WECHAT_PLATFORM_PUBLIC_KEY")
+WECHAT_PRIVATE_KEY_PATH = _read_env_any(["WECHAT_PRIVATE_KEY_PATH", "WECHAT_PAY_PRIVATE_KEY_PATH"])
+WECHAT_PLATFORM_PUBLIC_KEY_PATH = _read_env_any(
+    ["WECHAT_PLATFORM_PUBLIC_KEY_PATH", "WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH"]
+)
+WECHAT_PLATFORM_PUBLIC_KEY_ID = _read_env_any(
+    ["WECHAT_PLATFORM_PUBLIC_KEY_ID", "WECHAT_PAY_PLATFORM_PUBLIC_KEY_ID"]
+)
+WECHAT_PRIVATE_KEY = _read_file(WECHAT_PRIVATE_KEY_PATH) or _read_pem_env_any(
+    ["WECHAT_PRIVATE_KEY", "WECHAT_PAY_PRIVATE_KEY", "WX_PRIVATE_KEY", "MCH_PRIVATE_KEY"]
+)
+WECHAT_PLATFORM_PUBLIC_KEY = _read_file(WECHAT_PLATFORM_PUBLIC_KEY_PATH) or _read_pem_env_any(
+    ["WECHAT_PLATFORM_PUBLIC_KEY", "WECHAT_PAY_PLATFORM_PUBLIC_KEY", "WX_PLATFORM_PUBLIC_KEY"]
+)
 
 
 def get_db_conn() -> sqlite3.Connection:
@@ -87,29 +126,96 @@ def validate_wechat_login_config() -> None:
             raise RuntimeError(f"{key} 仍为占位值，请替换为真实配置")
 
 
-def validate_wechat_config() -> None:
-    required_values = {
-        "WECHAT_APPID": WECHAT_APPID,
-        "WECHAT_MCHID": WECHAT_MCHID,
-        "WECHAT_V3_KEY": WECHAT_V3_KEY,
-        "WECHAT_CERT_SERIAL_NO": WECHAT_CERT_SERIAL_NO,
-        "WECHAT_PRIVATE_KEY": WECHAT_PRIVATE_KEY,
-        "WECHAT_PLATFORM_PUBLIC_KEY": WECHAT_PLATFORM_PUBLIC_KEY,
-    }
-
+def _check_required_config(required_values: dict) -> dict:
+    missing_keys: List[str] = []
+    placeholder_keys: List[str] = []
+    invalid_keys: List[str] = []
     for key, value in required_values.items():
         text = str(value).strip()
         if not text:
-            raise RuntimeError(f"{key} 未配置")
+            missing_keys.append(key)
         if "YOUR_" in text or "这里填入" in text:
-            raise RuntimeError(f"{key} 仍为占位值，请替换为真实配置")
+            placeholder_keys.append(key)
 
-    if len(WECHAT_V3_KEY) != 32:
-        raise RuntimeError("WECHAT_V3_KEY 长度必须为 32 字符")
-    if "BEGIN PRIVATE KEY" not in WECHAT_PRIVATE_KEY:
-        raise RuntimeError("WECHAT_PRIVATE_KEY 格式不正确")
-    if "BEGIN PUBLIC KEY" not in WECHAT_PLATFORM_PUBLIC_KEY:
-        raise RuntimeError("WECHAT_PLATFORM_PUBLIC_KEY 格式不正确")
+    return {
+        "configured": not missing_keys and not placeholder_keys and not invalid_keys,
+        "required": list(required_values.keys()),
+        "missing": missing_keys,
+        "placeholder": placeholder_keys,
+        "invalid": invalid_keys,
+    }
+
+
+def get_wechat_payment_config_status() -> dict:
+    create_required_values = {
+        "WECHAT_APPID": WECHAT_APPID,
+        "WECHAT_MCHID": WECHAT_MCHID,
+        "WECHAT_CERT_SERIAL_NO": WECHAT_CERT_SERIAL_NO,
+        "WECHAT_PRIVATE_KEY_PATH": WECHAT_PRIVATE_KEY,
+    }
+    callback_required_values = {
+        "WECHAT_V3_KEY": WECHAT_V3_KEY,
+        "WECHAT_PLATFORM_PUBLIC_KEY_PATH": WECHAT_PLATFORM_PUBLIC_KEY,
+    }
+
+    create_status = _check_required_config(create_required_values)
+    callback_status = _check_required_config(callback_required_values)
+
+    if WECHAT_V3_KEY and len(WECHAT_V3_KEY) != 32:
+        callback_status["invalid"].append("WECHAT_V3_KEY")
+    if WECHAT_PRIVATE_KEY and "BEGIN PRIVATE KEY" not in WECHAT_PRIVATE_KEY:
+        create_status["invalid"].append("WECHAT_PRIVATE_KEY_PATH")
+    if WECHAT_PLATFORM_PUBLIC_KEY and "BEGIN PUBLIC KEY" not in WECHAT_PLATFORM_PUBLIC_KEY:
+        callback_status["invalid"].append("WECHAT_PLATFORM_PUBLIC_KEY_PATH")
+    create_status["configured"] = (
+        not create_status["missing"] and not create_status["placeholder"] and not create_status["invalid"]
+    )
+    callback_status["configured"] = (
+        not callback_status["missing"] and not callback_status["placeholder"] and not callback_status["invalid"]
+    )
+
+    return {
+        "configured": create_status["configured"] and not create_status["invalid"],
+        "create_order_missing": create_status["missing"],
+        "callback_missing": callback_status["missing"],
+        "create_order": create_status,
+        "callback": callback_status,
+        "optional_with_defaults": {
+            "WECHAT_API_BASE": WECHAT_API_BASE,
+            "WECHAT_NOTIFY_URL": WECHAT_NOTIFY_URL,
+            "FIXED_AMOUNT": f"{FIXED_AMOUNT:.2f}",
+        },
+        "supported_aliases": {
+            "WECHAT_APPID": ["WECHAT_PAY_APPID", "WX_APPID", "APPID", "WECHAT_MP_APPID"],
+            "WECHAT_MCHID": ["WECHAT_PAY_MCHID", "WX_MCHID", "MCH_ID", "MCHID"],
+            "WECHAT_V3_KEY": ["WECHAT_API_V3_KEY", "WECHAT_PAY_V3_KEY", "WX_API_V3_KEY", "API_V3_KEY"],
+            "WECHAT_CERT_SERIAL_NO": ["WECHAT_PAY_CERT_SERIAL_NO", "WX_CERT_SERIAL_NO", "MCH_CERT_SERIAL_NO"],
+            "WECHAT_PRIVATE_KEY_PATH": ["WECHAT_PAY_PRIVATE_KEY_PATH"],
+            "WECHAT_PRIVATE_KEY": ["WECHAT_PAY_PRIVATE_KEY", "WX_PRIVATE_KEY", "MCH_PRIVATE_KEY"],
+            "WECHAT_PLATFORM_PUBLIC_KEY_PATH": ["WECHAT_PAY_PLATFORM_PUBLIC_KEY_PATH"],
+            "WECHAT_PLATFORM_PUBLIC_KEY": ["WECHAT_PAY_PLATFORM_PUBLIC_KEY", "WX_PLATFORM_PUBLIC_KEY"],
+        },
+        "env_source": "backend reads process environment; deployed service imports backend/.env via systemd EnvironmentFile",
+    }
+
+
+def validate_wechat_create_config() -> None:
+    status = get_wechat_payment_config_status()
+    create_status = status["create_order"]
+    if create_status["missing"]:
+        raise RuntimeError("微信支付创建订单配置不完整，缺少: " + ", ".join(create_status["missing"]))
+    if create_status["placeholder"]:
+        raise RuntimeError("微信支付创建订单配置仍为占位值: " + ", ".join(create_status["placeholder"]))
+    if create_status["invalid"]:
+        raise RuntimeError("微信支付创建订单配置格式不正确: " + ", ".join(create_status["invalid"]))
+
+
+def validate_wechat_callback_config() -> None:
+    status = get_wechat_payment_config_status()
+    callback_status = status["callback"]
+    missing = callback_status["missing"] + callback_status["invalid"]
+    if missing:
+        raise RuntimeError("微信支付回调配置不完整或格式不正确: " + ", ".join(missing))
 
 
 def now_utc() -> datetime:
@@ -241,6 +347,16 @@ def init_db() -> None:
     order_cols = [row[1] for row in cur.fetchall()]
     if "user_id" not in order_cols:
         cur.execute("ALTER TABLE orders ADD COLUMN user_id INTEGER")
+    if "username" not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN username TEXT")
+    if "plan" not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN plan TEXT")
+    if "vip_type" not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN vip_type TEXT")
+    if "transaction_id" not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN transaction_id TEXT")
+    if "paid_at" not in order_cols:
+        cur.execute("ALTER TABLE orders ADD COLUMN paid_at TEXT")
     conn.commit()
     conn.close()
 
@@ -303,7 +419,6 @@ def _wechat_post_native(out_trade_no: str) -> str:
 
     body = json.dumps(body_dict, ensure_ascii=False, separators=(",", ":"))
     auth = _build_wechat_authorization("POST", url_path, body)
-    print("WeChat V3 Authorization:", auth)
 
     req = urlrequest.Request(
         url=f"{WECHAT_API_BASE}{url_path}",
@@ -340,6 +455,139 @@ def _wechat_post_native(out_trade_no: str) -> str:
             traceback.print_exc()
             raise HTTPException(status_code=502, detail=f"微信下单响应异常: {data}") from exc
     return code_url
+
+
+def _wechat_query_order(out_trade_no: str) -> dict:
+    url_path = "/v3/pay/transactions/out-trade-no/{0}?mchid={1}".format(
+        urlparse.quote(out_trade_no),
+        urlparse.quote(WECHAT_MCHID),
+    )
+    auth = _build_wechat_authorization("GET", url_path, "")
+    req = urlrequest.Request(
+        url=f"{WECHAT_API_BASE}{url_path}",
+        method="GET",
+        headers={
+            "Accept": "application/json",
+            "Authorization": auth,
+            "User-Agent": "AI-Storyboard-X/1.0",
+        },
+    )
+    try:
+        with urlrequest.urlopen(req, timeout=12) as resp:
+            raw = resp.read().decode("utf-8")
+            return json.loads(raw)
+    except urlerror.HTTPError as e:
+        error_body = e.read().decode("utf-8")
+        print("微信查单失败: out_trade_no={0}, status={1}, body={2}".format(out_trade_no, e.code, error_body))
+        return {}
+    except Exception as exc:
+        print("微信查单请求异常: out_trade_no={0}, error={1}".format(out_trade_no, type(exc).__name__))
+        return {}
+
+
+def _activate_vip_for_paid_order(out_trade_no: str, transaction_id: str = "", paid_at: str = "") -> dict:
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT status, user_id, amount FROM orders WHERE order_id = ?", (out_trade_no,))
+    order = cur.fetchone()
+    if not order:
+        conn.close()
+        return {"ok": False, "message": "order_not_found"}
+
+    user_id = order["user_id"]
+    if not user_id:
+        conn.close()
+        return {"ok": False, "message": "order_missing_user_id"}
+
+    expire_date = (now_utc() + timedelta(days=30)).isoformat()
+    effective_paid_at = paid_at or now_utc().isoformat()
+
+    if order["status"] in {"paid", "success"}:
+        cur.execute(
+            """
+            UPDATE orders
+            SET status = 'paid',
+                transaction_id = COALESCE(NULLIF(transaction_id, ''), ?),
+                paid_at = COALESCE(NULLIF(paid_at, ''), ?)
+            WHERE order_id = ?
+            """,
+            (transaction_id, effective_paid_at, out_trade_no),
+        )
+        cur.execute(
+            """
+            UPDATE users
+            SET is_vip = 1,
+                expire_at = CASE
+                    WHEN expire_at IS NULL OR expire_at = '' OR expire_at < ? THEN ?
+                    ELSE expire_at
+                END
+            WHERE id = ?
+            """,
+            (expire_date, expire_date, user_id),
+        )
+        conn.commit()
+        conn.close()
+        return {"ok": True, "message": "already_paid", "user_id": user_id}
+
+    cur.execute(
+        """
+        UPDATE orders
+        SET status = 'paid',
+            transaction_id = ?,
+            paid_at = ?
+        WHERE order_id = ?
+        """,
+        (transaction_id, effective_paid_at, out_trade_no),
+    )
+    cur.execute(
+        """
+        UPDATE users
+        SET is_vip = 1, expire_at = ?
+        WHERE id = ?
+        """,
+        (expire_date, user_id),
+    )
+    conn.commit()
+    conn.close()
+    print("支付订单已开通VIP: out_trade_no={0}, transaction_id={1}, user_id={2}".format(
+        out_trade_no,
+        transaction_id or "-",
+        user_id,
+    ))
+    return {"ok": True, "message": "paid", "user_id": user_id}
+
+
+def _sync_order_from_wechat(out_trade_no: str) -> dict:
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT status FROM orders WHERE order_id = ?", (out_trade_no,))
+    order = cur.fetchone()
+    conn.close()
+    if not order:
+        return {"synced": False, "message": "order_not_found"}
+    if order["status"] in {"paid", "success"}:
+        result = _activate_vip_for_paid_order(out_trade_no)
+        return {"synced": result.get("ok", False), "message": result.get("message", "already_paid")}
+
+    data = _wechat_query_order(out_trade_no)
+    trade_state = data.get("trade_state", "")
+    transaction_id = data.get("transaction_id", "")
+    print("微信查单结果: out_trade_no={0}, trade_state={1}, transaction_id={2}".format(
+        out_trade_no,
+        trade_state or "-",
+        transaction_id or "-",
+    ))
+    if trade_state != "SUCCESS":
+        return {"synced": False, "message": trade_state or "not_success"}
+
+    amount_total = data.get("amount", {}).get("total", 0)
+    if Decimal(str(amount_total)) != FIXED_AMOUNT * 100:
+        print("微信查单金额不匹配: out_trade_no={0}, amount_total={1}".format(out_trade_no, amount_total))
+        return {"synced": False, "message": "amount_mismatch"}
+
+    paid_at = parse_iso_time(data.get("success_time", "")).isoformat()
+    result = _activate_vip_for_paid_order(out_trade_no, transaction_id=transaction_id, paid_at=paid_at)
+    return {"synced": result.get("ok", False), "message": result.get("message", "paid")}
 
 
 def _verify_wechat_signature(headers, body: str) -> bool:
@@ -394,7 +642,7 @@ def get_wechat_access_token():
         print("微信返回报错: {0}".format(resp))
         return None
     except Exception as e:
-        print("请求微信接口失败: {0}".format(e))
+        print("请求微信 access_token 接口失败: {0}".format(type(e).__name__))
         return None
 
 
@@ -450,12 +698,21 @@ class ToolsDispatchRequest(BaseModel):
     payload: dict = Field(default_factory=dict)
 
 
+@app.get("/api/payment/config-check")
+async def payment_config_check():
+    return get_wechat_payment_config_status()
+
+
 @app.get("/api/v1/auth/get_login_qrcode", response_model=LoginQRCodeResponse)
 async def get_login_qrcode():
     print("DEBUG: 正在请求微信登录二维码...")
     scene_id = str(uuid.uuid4())[:8]
 
-    validate_wechat_login_config()
+    try:
+        validate_wechat_login_config()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
     access_token = get_wechat_access_token()
     if not access_token:
         raise HTTPException(status_code=500, detail="微信凭证获取失败，请检查终端日志")
@@ -557,7 +814,7 @@ async def login_status(session_id: str):
 
 def verify_token_from_header(request: Request, authorization: Optional[str] = Header(default=None)) -> str:
     auth_header = request.headers.get("authorization")
-    print(f"DEBUG: 收到请求 - 路径: {request.url.path} | Authorization头: {auth_header}")
+    print(f"DEBUG: 收到请求 - 路径: {request.url.path} | Authorization头: {'present' if auth_header else 'missing'}")
     if not auth_header:
         print("警告：该请求未携带 Token！")
     if not authorization:
@@ -595,7 +852,11 @@ async def create_payment(request: Request, token: str = Depends(verify_token_fro
     except Exception:
         data = {}
     # print("DEBUG: 收到支付请求原始数据: {}".format(data))
-    validate_wechat_config()
+    try:
+        validate_wechat_create_config()
+    except RuntimeError as exc:
+        print("微信支付配置检查失败: {0}".format(str(exc)))
+        raise HTTPException(status_code=503, detail="微信支付暂未配置，请联系管理员完成商户配置。") from exc
 
     # 自动识别身份：token -> openid -> users.id
     conn = get_db_conn()
@@ -615,12 +876,14 @@ async def create_payment(request: Request, token: str = Depends(verify_token_fro
     resolved_user_id = int(user_row["id"])
 
     out_trade_no = make_order_id()
+    plan = str(data.get("plan") or "storyboard_x_monthly")
+    vip_type = str(data.get("vip_type") or "monthly")
     cur.execute(
         """
-        INSERT INTO orders (order_id, user_id, amount, status, created_at)
-        VALUES (?, ?, ?, 'pending', ?)
+        INSERT INTO orders (order_id, user_id, username, plan, vip_type, amount, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)
         """,
-        (out_trade_no, resolved_user_id, f"{FIXED_AMOUNT:.2f}", now_utc().isoformat()),
+        (out_trade_no, resolved_user_id, openid, plan, vip_type, f"{FIXED_AMOUNT:.2f}", now_utc().isoformat()),
     )
     conn.commit()
     conn.close()
@@ -634,6 +897,7 @@ async def create_payment(request: Request, token: str = Depends(verify_token_fro
     )
 
 
+@app.api_route("/api/payment/wechat/notify", methods=["GET", "POST"])
 @app.api_route("/api/v1/wechat/webhook", methods=["GET", "POST"])
 async def wechat_webhook(request: Request):
     # --- 新增：处理微信服务器验证 (GET请求) ---
@@ -645,7 +909,7 @@ async def wechat_webhook(request: Request):
 
     # --- 以下保留原有的 POST 处理逻辑 ---
     body = (await request.body()).decode("utf-8")
-    print(f"DEBUG: 收到微信回调请求体: {body[:100]}...")
+    print("DEBUG: 收到微信回调请求")
     content_type = request.headers.get("content-type", "")
 
     # 服务号扫码事件回调（XML）
@@ -693,9 +957,14 @@ async def wechat_webhook(request: Request):
         return "success"
 
     # 微信支付回调（JSON）
-    validate_wechat_config()
+    try:
+        validate_wechat_callback_config()
+    except RuntimeError as exc:
+        print("微信支付回调配置检查失败: {0}".format(str(exc)))
+        return JSONResponse(status_code=200, content={"code": "SUCCESS", "message": "配置待补齐，等待查单补偿"})
+
     if not _verify_wechat_signature(request.headers, body):
-        print(f"DEBUG: 验签失败！Header中的序列号为: {request.headers.get('Wechatpay-Serial')}")
+        print("微信支付回调验签失败: serial={0}".format(request.headers.get("Wechatpay-Serial")))
         raise HTTPException(status_code=401, detail="微信回调验签失败")
 
     payload = json.loads(body)
@@ -703,72 +972,76 @@ async def wechat_webhook(request: Request):
     plain_data = _decrypt_wechat_resource(resource)
 
     if plain_data.get("trade_state") != "SUCCESS":
+        print("微信支付回调非成功状态: out_trade_no={0}, trade_state={1}".format(
+            plain_data.get("out_trade_no", ""),
+            plain_data.get("trade_state", ""),
+        ))
         return JSONResponse(status_code=200, content={"code": "SUCCESS", "message": "成功"})
 
     out_trade_no = plain_data.get("out_trade_no", "")
     amount_total = plain_data.get("amount", {}).get("total", 0)
-    openid = plain_data.get("payer", {}).get("openid", "")
+    transaction_id = plain_data.get("transaction_id", "")
+    success_time = plain_data.get("success_time", "")
     if not out_trade_no:
         raise HTTPException(status_code=400, detail="回调缺少 out_trade_no")
     if Decimal(str(amount_total)) != FIXED_AMOUNT * 100:
+        print("微信支付回调金额不匹配: out_trade_no={0}, amount_total={1}".format(out_trade_no, amount_total))
         raise HTTPException(status_code=400, detail="订单金额校验失败")
 
+    paid_at = parse_iso_time(success_time).isoformat()
+    result = _activate_vip_for_paid_order(out_trade_no, transaction_id=transaction_id, paid_at=paid_at)
+    print("微信支付回调处理结果: out_trade_no={0}, trade_state=SUCCESS, transaction_id={1}, result={2}".format(
+        out_trade_no,
+        transaction_id or "-",
+        result.get("message", ""),
+    ))
+    if not result.get("ok"):
+        raise HTTPException(status_code=404, detail="订单不存在")
+    return JSONResponse(status_code=200, content={"code": "SUCCESS", "message": "成功"})
+
+
+def _get_order_status_payload(order_id: str) -> dict:
+    _sync_order_from_wechat(order_id)
     conn = get_db_conn()
     cur = conn.cursor()
-    cur.execute("SELECT status, user_id FROM orders WHERE order_id = ?", (out_trade_no,))
+    cur.execute("SELECT status, user_id FROM orders WHERE order_id = ?", (order_id,))
     order = cur.fetchone()
     if not order:
         conn.close()
         raise HTTPException(status_code=404, detail="订单不存在")
 
-    if order["status"] != "success":
-        token = f"XCC_{uuid.uuid4().hex}"
-        expire_date = (now_utc() + timedelta(days=30)).isoformat()
-        user_id = order["user_id"]
-        cur.execute("UPDATE orders SET status = 'success' WHERE order_id = ?", (out_trade_no,))
-        cur.execute(
-            """
-            INSERT OR REPLACE INTO tokens (token, order_id, openid, expire_date, status)
-            VALUES (?, ?, ?, ?, 1)
-            """,
-            (token, out_trade_no, openid, expire_date),
-        )
-        if user_id:
-            cur.execute(
-                """
-                UPDATE users
-                SET is_vip = 1, expire_at = ?
-                WHERE id = ?
-                """,
-                (expire_date, user_id),
-            )
-        conn.commit()
-        print(f"🔥 订单 {out_trade_no} 自动支付成功，已生成 Token")
+    status = str(order["status"] or "pending").lower()
+    if status == "success":
+        status = "paid"
+    vip_active = False
+    if order["user_id"]:
+        cur.execute("SELECT is_vip FROM users WHERE id = ?", (order["user_id"],))
+        user_row = cur.fetchone()
+        vip_active = bool(user_row and int(user_row["is_vip"]) == 1)
     conn.close()
-    return JSONResponse(status_code=200, content={"code": "SUCCESS", "message": "成功"})
+    return {
+        "status": status,
+        "order_id": order_id,
+        "vip_active": vip_active,
+        "redirect_url": "/dashboard",
+    }
+
+
+@app.get("/api/payment/order-status")
+async def payment_order_status(order_id: str):
+    return _get_order_status_payload(order_id)
 
 
 @app.get("/api/v1/payment/status")
 async def payment_status(order_id: str):
-    conn = get_db_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT status FROM orders WHERE order_id = ?", (order_id,))
-    order = cur.fetchone()
-    if not order:
-        conn.close()
-        raise HTTPException(status_code=404, detail="订单不存在")
-
-    if order["status"] != "success":
-        conn.close()
-        return {"status": "pending", "order_id": order_id}
-
-    cur.execute(
-        "SELECT token FROM tokens WHERE order_id = ? AND status = 1 LIMIT 1",
-        (order_id,),
-    )
-    token_row = cur.fetchone()
-    conn.close()
-    return {"status": "success", "order_id": order_id, "token": token_row["token"] if token_row else None}
+    payload = _get_order_status_payload(order_id)
+    legacy_status = "success" if payload["status"] == "paid" else payload["status"]
+    return {
+        "status": legacy_status,
+        "order_id": order_id,
+        "vip_active": payload["vip_active"],
+        "redirect_url": payload["redirect_url"],
+    }
 
 
 @app.post("/api/v1/tools")
@@ -780,8 +1053,7 @@ async def dispatch_tool(body: ToolsDispatchRequest):
     raise HTTPException(status_code=404, detail="未找到该工具")
 
 
-@app.get("/api/v1/user/info")
-async def get_user_info(token: str = Depends(verify_token_from_header)):
+def _get_user_info_payload(token: str) -> dict:
     conn = get_db_conn()
     cur = conn.cursor()
 
@@ -806,6 +1078,37 @@ async def get_user_info(token: str = Depends(verify_token_from_header)):
         "is_vip": int(user_row["is_vip"]),
         "expire_at": user_row["expire_at"],
     }
+
+
+@app.get("/api/v1/user/info")
+async def get_user_info(response: Response, token: str = Depends(verify_token_from_header)):
+    response.headers["Cache-Control"] = "no-store"
+    return _get_user_info_payload(token)
+
+
+@app.get("/api/me")
+async def get_me(response: Response, authorization: Optional[str] = Header(default=None)):
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+
+    if not authorization:
+        return {"is_logged_in": False, "user": None}
+
+    parts = authorization.split(" ", 1)
+    if len(parts) != 2 or parts[0].lower() != "bearer" or not parts[1].strip():
+        return {"is_logged_in": False, "user": None}
+
+    token = parts[1].strip()
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT expire_date, status FROM tokens WHERE token = ?", (token,))
+    row = cur.fetchone()
+    conn.close()
+    if not row or int(row["status"]) != 1 or now_utc() >= parse_iso_time(row["expire_date"]):
+        return {"is_logged_in": False, "user": None}
+
+    user = _get_user_info_payload(token)
+    return {"is_logged_in": True, "user": user, **user}
 
 
 @app.get("/health")

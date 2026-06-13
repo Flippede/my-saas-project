@@ -10,6 +10,7 @@ type LoginQrcodeResponse = {
   qrcode_url?: string
   expires_in?: number
   message?: string
+  detail?: string
 }
 
 type LoginStatusResponse = {
@@ -17,6 +18,20 @@ type LoginStatusResponse = {
   token?: string
   user_id?: string | number
   message?: string
+  detail?: string
+}
+
+async function readApiResponse<T extends { message?: string; detail?: string }>(response: Response): Promise<T> {
+  const contentType = response.headers.get("content-type") || ""
+
+  if (contentType.includes("application/json")) {
+    return (await response.json()) as T
+  }
+
+  const text = (await response.text()).trim()
+  return {
+    message: text || `请求失败，HTTP ${response.status}`,
+  } as T
 }
 
 export default function LoginPage() {
@@ -30,11 +45,14 @@ export default function LoginPage() {
 
     async function fetchLoginQrcode() {
       try {
-        const response = await fetch(buildApiUrl("/api/v1/auth/get_login_qrcode"))
-        const data = (await response.json()) as LoginQrcodeResponse
+        const response = await fetch(buildApiUrl("/api/v1/auth/get_login_qrcode"), {
+          cache: "no-store",
+          credentials: "include",
+        })
+        const data = await readApiResponse<LoginQrcodeResponse>(response)
 
         if (!response.ok || !data?.qrcode_url || !data?.scene_id) {
-          throw new Error(data?.message || "获取登录二维码失败，请稍后重试。")
+          throw new Error(data?.message || data?.detail || "获取登录二维码失败，请稍后重试。")
         }
 
         if (cancelled) {
@@ -67,8 +85,12 @@ export default function LoginPage() {
       try {
         const response = await fetch(
           buildApiUrl(`/api/v1/auth/login_status?session_id=${encodeURIComponent(sessionId)}`),
+          {
+            cache: "no-store",
+            credentials: "include",
+          },
         )
-        const data = (await response.json()) as LoginStatusResponse
+        const data = await readApiResponse<LoginStatusResponse>(response)
 
         if (!response.ok || cancelled) {
           return
@@ -77,7 +99,7 @@ export default function LoginPage() {
         if (data.status === "success" && data.token) {
           clearInterval(pollTimer)
           storeSession(data.token, data.user_id)
-          router.push("/")
+          router.push("/?login=success")
         }
       } catch {
         // Ignore transient polling errors and keep waiting.

@@ -6,6 +6,7 @@ export type CreateOrderResponse = {
   amount?: string
   status?: string
   message?: string
+  detail?: string
 }
 
 export async function createOrder(token: string): Promise<CreateOrderResponse> {
@@ -17,14 +18,20 @@ export async function createOrder(token: string): Promise<CreateOrderResponse> {
     }),
   })
 
-  const payload = (await response.json()) as CreateOrderResponse
+  let payload: CreateOrderResponse = {}
+
+  try {
+    payload = (await response.json()) as CreateOrderResponse
+  } catch {
+    payload = {}
+  }
 
   if (!response.ok) {
-    throw new Error(payload?.message || `创建支付订单失败（HTTP ${response.status}）`)
+    throw new Error(payload?.message || payload?.detail || `创建支付订单失败（HTTP ${response.status}）`)
   }
 
   if (!payload?.code_url || !payload?.order_id) {
-    throw new Error(payload?.message || "支付订单返回数据不完整")
+    throw new Error(payload?.message || payload?.detail || "支付订单返回数据不完整")
   }
 
   return payload

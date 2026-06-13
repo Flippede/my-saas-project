@@ -1,0 +1,18 @@
+[Unit]
+Description=X Creator FastAPI Backend
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=admin
+Group=admin
+WorkingDirectory=/www/wwwroot/x-creator.cc/my-saas-project/backend
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/www/wwwroot/x-creator.cc/my-saas-project/backend/.env
+ExecStart=/www/wwwroot/x-creator.cc/my-saas-project/backend/.venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
