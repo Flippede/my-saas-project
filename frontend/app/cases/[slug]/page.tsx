@@ -2,6 +2,8 @@ import type { Metadata } from "next"
 import type React from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
+import { existsSync } from "fs"
+import path from "path"
 import type { LucideIcon } from "lucide-react"
 import {
   ArrowLeft,
@@ -11,6 +13,7 @@ import {
   Crown,
   Film,
   Gamepad2,
+  ImageIcon,
   Layers3,
   Lightbulb,
   Map,
@@ -42,6 +45,21 @@ const visualStyles: Record<string, { gradient: string; accent: string; gridAccen
     accent: "text-amber-100",
     gridAccent: "bg-amber-200/80",
   },
+}
+
+const galleryTypeLabels: Record<NonNullable<DemoCase["gallery"]>[number]["type"], string> = {
+  character: "角色图",
+  boss: "Boss 图",
+  scene: "场景图",
+  ui: "UI 截图",
+  storyboard: "封面 / 分镜",
+}
+
+function publicImageExists(image?: string) {
+  if (!image || !image.startsWith("/")) {
+    return false
+  }
+  return existsSync(path.join(process.cwd(), "public", image.slice(1)))
 }
 
 export function generateStaticParams() {
@@ -125,6 +143,22 @@ export default function CaseDetailPage({ params }: { params: { slug: string } })
         </section>
 
         <div className="relative mx-auto grid max-w-7xl gap-6 px-4 pb-24 lg:px-6">
+          <ContentSection title="视觉预览区" icon={ImageIcon}>
+            <p className="text-sm leading-7 text-neutral-400">
+              这里预留官方 Demo 图片展示结构。当前仓库不包含图片文件时，会显示占位卡片和生成 Prompt；后续手动放入约定路径图片后，页面会展示真实图片。
+            </p>
+            <div className="grid gap-4 lg:grid-cols-2">
+              {(demo.gallery || []).map((item) => (
+                <VisualPreviewCard
+                  key={`${item.type}-${item.title}`}
+                  item={item}
+                  imageExists={publicImageExists(item.image)}
+                  gradient={style.gradient}
+                />
+              ))}
+            </div>
+          </ContentSection>
+
           <ContentSection title="世界观" icon={Compass}>
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
               <TextBlock label="概要" value={demo.worldview.summary} />
@@ -317,6 +351,62 @@ function MetaCard({ icon: Icon, label, value }: { icon: LucideIcon; label: strin
       <div className="text-xs text-neutral-500">{label}</div>
       <div className="mt-2 text-sm leading-6 text-neutral-300">{value}</div>
     </div>
+  )
+}
+
+function VisualPreviewCard({
+  item,
+  imageExists,
+  gradient,
+}: {
+  item: NonNullable<DemoCase["gallery"]>[number]
+  imageExists: boolean
+  gradient: string
+}) {
+  return (
+    <article className="overflow-hidden rounded-lg border border-white/10 bg-black/25">
+      <div className={`relative aspect-video bg-gradient-to-br ${gradient}`}>
+        {imageExists && item.image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full flex-col justify-between p-5">
+            <div className="flex items-center justify-between gap-3">
+              <span className="rounded-md border border-white/15 bg-black/35 px-3 py-1 text-xs text-neutral-200">
+                {galleryTypeLabels[item.type]}
+              </span>
+              <span className="rounded-md border border-amber-200/25 bg-amber-200/[0.12] px-3 py-1 text-xs text-amber-100">
+                等待生成图片
+              </span>
+            </div>
+            <div className="grid grid-cols-6 gap-2">
+              {Array.from({ length: 18 }).map((_, index) => (
+                <span
+                  key={index}
+                  className={`h-3 rounded-sm ${index % 5 === 0 ? "bg-cyan-200/70" : index % 7 === 0 ? "bg-amber-200/70" : "bg-white/15"}`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 text-sm text-neutral-200">
+              <ImageIcon className="h-4 w-4 text-cyan-100" />
+              <span>占位预览</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="p-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-xl font-semibold">{item.title}</h3>
+          <span className="rounded-md border border-white/10 bg-white/[0.05] px-2.5 py-1 text-xs text-neutral-300">
+            {galleryTypeLabels[item.type]}
+          </span>
+        </div>
+        <p className="mt-3 text-sm leading-7 text-neutral-400">
+          用途：作为官方 Demo 的{galleryTypeLabels[item.type]}预览素材，后续可手动放入 <span className="text-neutral-200">{item.image || "约定图片路径"}</span>。
+        </p>
+        <PromptBlock label="生成 Prompt" value={item.prompt} />
+      </div>
+    </article>
   )
 }
 

@@ -2,6 +2,14 @@ export type DemoCase = {
   slug: string
   title: string
   subtitle: string
+  heroImage?: string
+  coverImage?: string
+  gallery?: Array<{
+    title: string
+    type: "character" | "boss" | "scene" | "ui" | "storyboard"
+    image?: string
+    prompt: string
+  }>
   genre: string
   artStyle: string
   targetPlatform: string
@@ -77,6 +85,45 @@ export const demoCases: DemoCase[] = [
     targetPlatform: "PC / Steam 概念验证，后续可扩展主机与云试玩",
     oneSentencePitch: "被流放的斩妖人带着半枚雷符回到烬山，在雨夜古寺与吞食山神的妖王决战。",
     originalIdea: "一个国风暗黑动作游戏，主角是被流放的斩妖人，回到被妖雾吞没的故乡，一路挑战古寺、山道、地宫里的强大 Boss。",
+    heroImage: "/cases/dark-myth-action/cover.webp",
+    coverImage: "/cases/dark-myth-action/cover.webp",
+    gallery: [
+      {
+        title: "封面图",
+        type: "storyboard",
+        image: "/cases/dark-myth-action/cover.webp",
+        prompt:
+          "16:9 cover key art, original Chinese dark fantasy action game, rain soaked mountain gate and ruined temple, exiled demon slayer holding a lightning talisman blade, bronze bells, black mist, cinematic lighting, commercial original style, no known IP",
+      },
+      {
+        title: "主角图",
+        type: "character",
+        image: "/cases/dark-myth-action/protagonist.webp",
+        prompt:
+          "16:9 character concept sheet, original dark Chinese fantasy swordsman, bamboo hat, deep teal robe, talisman wrapped corrupted left arm, long dao with blue lightning, bronze bell accessories, clean presentation, commercial concept art",
+      },
+      {
+        title: "Boss 图",
+        type: "boss",
+        image: "/cases/dark-myth-action/boss.webp",
+        prompt:
+          "16:9 boss concept art, giant bronze monk statue fused with corrupted warrior, oxidized copper, torn kasaya, floating talismans, rainy ruined monastery arena, oppressive dark fantasy mood, original commercial style",
+      },
+      {
+        title: "场景图",
+        type: "scene",
+        image: "/cases/dark-myth-action/scene-1.webp",
+        prompt:
+          "16:9 environment concept, rainy Chinese mountain gate at night, broken wooden paifang, red lantern reflections, black demon mist, distant ruined temple silhouette, side scrolling action game atmosphere",
+      },
+      {
+        title: "UI 截图图",
+        type: "ui",
+        image: "/cases/dark-myth-action/ui.webp",
+        prompt:
+          "16:9 game UI mockup, Chinese dark fantasy boss fight HUD, segmented boss health bar, talisman skill wheel, lightning energy meter, bronze green and deep red palette, readable original interface",
+      },
+    ],
     worldview: {
       summary:
         "烬山曾是镇妖司封印山神残骸的圣地，十年前一场天雷劈开封印，妖雾顺着古道扩散，村落、寺院和矿洞逐渐被异化。玩家扮演被逐出师门的斩妖人，在一夜大雨中重返故乡，追查自己为何与妖雾共鸣。",
@@ -250,6 +297,45 @@ export const demoCases: DemoCase[] = [
     targetPlatform: "PC 概念验证，后续适配云试玩和短视频互动叙事",
     oneSentencePitch: "失忆快递员穿梭在分层霓虹都市，利用被禁用的城市地图破解企业 AI 对现实的重写。",
     originalIdea: "一个赛博朋克开放世界游戏，玩家骑飞行摩托送违禁数据，在霓虹城市里接任务、追车、潜入高塔，对抗控制城市记忆的企业 AI。",
+    heroImage: "/cases/cyberpunk-open-world/cover.webp",
+    coverImage: "/cases/cyberpunk-open-world/cover.webp",
+    gallery: [
+      {
+        title: "封面图",
+        type: "storyboard",
+        image: "/cases/cyberpunk-open-world/cover.webp",
+        prompt:
+          "16:9 cover key art, original cyberpunk open world game, silver haired courier on black purple hoverbike, neon rainy layered megacity, drone searchlights, hidden blue road projection, cinematic commercial style, no known IP",
+      },
+      {
+        title: "主角图",
+        type: "character",
+        image: "/cases/cyberpunk-open-world/protagonist.webp",
+        prompt:
+          "16:9 character concept sheet, original cyberpunk courier heroine, short silver hair, translucent tech raincoat, glowing cybernetic eye, lightweight exoskeleton legs, compact data case backpack, hoverbike accessory",
+      },
+      {
+        title: "Boss/反派图",
+        type: "boss",
+        image: "/cases/cyberpunk-open-world/boss.webp",
+        prompt:
+          "16:9 antagonist concept art, cyberpunk corporate security enforcer, white suit mixed with combat prosthetics, transparent visor, floating data halo, arm railgun, cold corporate tower lighting, original design",
+      },
+      {
+        title: "城市场景图",
+        type: "scene",
+        image: "/cases/cyberpunk-open-world/scene-1.webp",
+        prompt:
+          "16:9 environment concept, neon rainy Asian megacity, low altitude traffic lanes, hoverbikes weaving through dense signs, drones, layered streets and old network glitches, open world game mood",
+      },
+      {
+        title: "UI 截图图",
+        type: "ui",
+        image: "/cases/cyberpunk-open-world/ui.webp",
+        prompt:
+          "16:9 game UI mockup, cyberpunk layered city map, toggle between real city and deleted old net, mission markers, drone patrol heat zones, neon cyan magenta interface, clean readable layout",
+      },
+    ],
     worldview: {
       summary:
         "新海城被企业 AI「明昼」分割成上城、雨街和地下旧网三层。所有居民的记忆、信用和通行权限都由实时地图计算，地图之外的人会被系统判定为不存在。",
@@ -415,6 +501,45 @@ export const demoCases: DemoCase[] = [
     targetPlatform: "PC / Steam Deck / Switch 概念方向，移动端可做轻量版本",
     oneSentencePitch: "一名蘑菇邮差在星灯熄灭的森林里送出最后七封信，修复村民记忆并唤醒沉睡的月鲸。",
     originalIdea: "一个像素 RPG 冒险游戏，主角是蘑菇邮差，在森林、矿洞和湖边村庄送信、解谜、战斗，整体温暖但有一点忧伤。",
+    heroImage: "/cases/pixel-rpg-adventure/cover.webp",
+    coverImage: "/cases/pixel-rpg-adventure/cover.webp",
+    gallery: [
+      {
+        title: "封面图",
+        type: "storyboard",
+        image: "/cases/pixel-rpg-adventure/cover.webp",
+        prompt:
+          "16:9 cover key art, original cozy pixel RPG adventure, tiny mushroom mail carrier under star lantern forest, warm village lights, moon whale silhouette in lake reflection, 16-bit inspired commercial original style",
+      },
+      {
+        title: "主角图",
+        type: "character",
+        image: "/cases/pixel-rpg-adventure/protagonist.webp",
+        prompt:
+          "16:9 character concept sheet, cute mushroom mail carrier protagonist, green postman cape, vintage mail satchel, wooden stamp staff, glowing red dots on mushroom cap, 16-bit pixel art inspired, original design",
+      },
+      {
+        title: "怪物/Boss 图",
+        type: "boss",
+        image: "/cases/pixel-rpg-adventure/boss.webp",
+        prompt:
+          "16:9 boss concept art, shadow mail carrier and crying puppet tree motifs, cozy but mysterious pixel RPG mood, black purple silhouette, warm forest lanterns, emotional fairy tale style, original commercial design",
+      },
+      {
+        title: "村庄/地牢场景图",
+        type: "scene",
+        image: "/cases/pixel-rpg-adventure/scene-1.webp",
+        prompt:
+          "16:9 environment concept, cozy 16-bit inspired pixel village post office, mushroom houses, tiny mailboxes, mossy ground, warm lantern light, forest path leading toward firefly mine",
+      },
+      {
+        title: "UI 截图图",
+        type: "ui",
+        image: "/cases/pixel-rpg-adventure/ui.webp",
+        prompt:
+          "16:9 game UI mockup, cozy pixel RPG journal, open notebook with letters and stamps, pixel map and NPC portraits, handmade stickers, warm readable interface, original visual style",
+      },
+    ],
     worldview: {
       summary:
         "星灯森林靠树梢上的星灯记录所有居民的记忆。某晚星灯逐个熄灭，村民忘记名字、道路和彼此的约定。小邮差咕噜收到最后七封没有寄件人的信，必须把信送到正确的人手里。",
