@@ -1,6 +1,6 @@
 import copy
 import json
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 
 ALLOWED_REGENERATE_SECTIONS = {
@@ -162,7 +162,7 @@ def ensure_list(value: Any) -> list:
     return [value]
 
 
-def ensure_string_list(value: Any) -> list[str]:
+def ensure_string_list(value: Any) -> List[str]:
     return [clean_text(item) for item in ensure_list(value) if clean_text(item)]
 
 
@@ -242,7 +242,7 @@ class BaseGameWorldProvider:
     def generate_game_world(self, input_payload: dict) -> dict:
         raise NotImplementedError("AI game provider is not implemented.")
 
-    def regenerate_section(self, current_output: dict, section: str, instruction: str, input_payload: dict | None = None) -> Any:
+    def regenerate_section(self, current_output: dict, section: str, instruction: str, input_payload: Optional[dict] = None) -> Any:
         raise NotImplementedError("AI game provider is not implemented.")
 
 
@@ -302,7 +302,7 @@ def normalize_protagonist(value: Any, art_style: str = "") -> dict:
     }
 
 
-def normalize_bosses(value: Any, art_style: str = "") -> list[dict]:
+def normalize_bosses(value: Any, art_style: str = "") -> List[Dict]:
     bosses = []
     for index, item in enumerate(ensure_list(value), start=1):
         data = item if isinstance(item, dict) else {"name": f"Boss {index}", "concept": clean_text(item)}
@@ -324,7 +324,7 @@ def normalize_bosses(value: Any, art_style: str = "") -> list[dict]:
     return bosses
 
 
-def normalize_scenes(value: Any, art_style: str = "") -> list[dict]:
+def normalize_scenes(value: Any, art_style: str = "") -> List[Dict]:
     scenes = []
     for index, item in enumerate(ensure_list(value), start=1):
         data = item if isinstance(item, dict) else {"name": f"场景 {index}", "description": clean_text(item)}
@@ -344,7 +344,7 @@ def normalize_scenes(value: Any, art_style: str = "") -> list[dict]:
     return scenes
 
 
-def normalize_ui_screens(value: Any, art_style: str = "") -> list[dict]:
+def normalize_ui_screens(value: Any, art_style: str = "") -> List[Dict]:
     screens = []
     for index, item in enumerate(ensure_list(value), start=1):
         data = item if isinstance(item, dict) else {"name": f"UI 页面 {index}", "purpose": clean_text(item)}
@@ -365,7 +365,7 @@ def normalize_ui_screens(value: Any, art_style: str = "") -> list[dict]:
     return screens
 
 
-def normalize_video_storyboard(value: Any, fallback_prompts: list[str] | None = None) -> list[dict]:
+def normalize_video_storyboard(value: Any, fallback_prompts: Optional[List[str]] = None) -> List[Dict]:
     shots = []
     raw_items = ensure_list(value)
     if not raw_items and fallback_prompts:
@@ -407,7 +407,7 @@ def normalize_asset_prompts(value: Any) -> dict:
     return {key: ensure_string_list(data.get(key)) for key in ASSET_PROMPT_KEYS}
 
 
-def normalize_game_world_result(raw_result: dict, input_payload: dict | None = None) -> dict:
+def normalize_game_world_result(raw_result: dict, input_payload: Optional[dict] = None) -> dict:
     payload = input_payload or {}
     result = copy.deepcopy(raw_result or {})
     source_input = result.get("source_input") if isinstance(result.get("source_input"), dict) else {}
@@ -445,7 +445,7 @@ def normalize_game_world_result(raw_result: dict, input_payload: dict | None = N
     return normalized
 
 
-def normalize_section_value(section: str, value: Any, input_payload: dict | None = None) -> Any:
+def normalize_section_value(section: str, value: Any, input_payload: Optional[dict] = None) -> Any:
     payload = input_payload or {}
     art_style = clean_text(payload.get("art_style"))
     if section == "worldview":

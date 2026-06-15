@@ -10,7 +10,7 @@ import uuid
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Tuple
 from urllib import error as urlerror
 from urllib import parse as urlparse
 from urllib import request as urlrequest
@@ -1126,7 +1126,7 @@ def _format_ai_game_asset(row: sqlite3.Row) -> dict:
 def _get_ai_game_asset_counts(project_id: int, user_id: Optional[int] = None) -> dict:
     conn = get_db_conn()
     cur = conn.cursor()
-    params: list[Any] = [project_id]
+    params: List[Any] = [project_id]
     where_sql = "WHERE project_id = ?"
     if user_id is not None:
         where_sql += " AND user_id = ?"
@@ -2173,9 +2173,9 @@ async def get_ai_game_project_assets(project_id: int, token: str = Depends(verif
     }
 
 
-def _build_ai_game_asset_update(body: AIGameAssetUpdateRequest, admin_update: bool = False) -> tuple[list[str], list[Any]]:
-    updates: list[str] = []
-    params: list[Any] = []
+def _build_ai_game_asset_update(body: AIGameAssetUpdateRequest, admin_update: bool = False) -> Tuple[List[str], List[Any]]:
+    updates: List[str] = []
+    params: List[Any] = []
 
     text_fields = ["title", "description", "prompt", "result_url", "thumbnail_url"]
     for field in text_fields:
@@ -2247,7 +2247,7 @@ async def admin_list_ai_game_assets(
     _admin: dict = Depends(require_admin_token),
 ):
     where_clauses = []
-    params: list[Any] = []
+    params: List[Any] = []
     normalized_status = _clean_text(status)
     if normalized_status:
         if normalized_status not in ALLOWED_AI_GAME_ASSET_STATUSES:
@@ -2353,7 +2353,7 @@ async def admin_list_game_submissions(
     cur = conn.cursor()
 
     where_sql = ""
-    params: list[Any] = []
+    params: List[Any] = []
     if normalized_status:
         where_sql = "WHERE status = ?"
         params.append(normalized_status)
@@ -2407,7 +2407,7 @@ async def admin_update_game_submission(
     _admin: dict = Depends(require_admin_token),
 ):
     updates = []
-    params: list[Any] = []
+    params: List[Any] = []
 
     if body.status is not None:
         status = _clean_text(body.status)

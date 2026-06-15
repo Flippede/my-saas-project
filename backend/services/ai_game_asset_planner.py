@@ -1,5 +1,5 @@
 import json
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 
 ASSET_TYPES = {
@@ -27,7 +27,7 @@ def _as_list(value: Any) -> list:
     return [value]
 
 
-def _string_list(value: Any) -> list[str]:
+def _string_list(value: Any) -> List[str]:
     return [_clean(item) for item in _as_list(value) if _clean(item)]
 
 
@@ -38,7 +38,7 @@ def _make_asset(
     title: str,
     description: str,
     prompt: str,
-    metadata: dict | None = None,
+    metadata: Optional[Dict] = None,
 ) -> dict:
     return {
         "project_id": project_id,
@@ -52,7 +52,7 @@ def _make_asset(
     }
 
 
-def _dedupe_assets(assets: list[dict]) -> list[dict]:
+def _dedupe_assets(assets: List[Dict]) -> List[Dict]:
     seen = set()
     unique_assets = []
     for asset in assets:
@@ -68,9 +68,9 @@ def _dedupe_assets(assets: list[dict]) -> list[dict]:
     return unique_assets
 
 
-def plan_assets_from_game_world(project_id: int, user_id: int, output_json: dict) -> list[dict]:
+def plan_assets_from_game_world(project_id: int, user_id: int, output_json: dict) -> List[Dict]:
     world = output_json or {}
-    assets: list[dict] = []
+    assets: List[Dict] = []
 
     protagonist = world.get("protagonist") if isinstance(world.get("protagonist"), dict) else {}
     protagonist_prompt = _clean(protagonist.get("visual_prompt"))

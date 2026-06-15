@@ -1,4 +1,5 @@
 import json
+from typing import Dict, List, Optional
 from urllib import error as urlerror
 from urllib import request as urlrequest
 
@@ -45,7 +46,7 @@ class OpenAICompatibleGameWorldProvider(BaseGameWorldProvider):
         parsed = parse_json_object(self._chat(messages))
         return normalize_game_world_result(parsed, input_payload)
 
-    def regenerate_section(self, current_output: dict, section: str, instruction: str, input_payload: dict | None = None):
+    def regenerate_section(self, current_output: dict, section: str, instruction: str, input_payload: Optional[dict] = None):
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {
@@ -58,7 +59,7 @@ class OpenAICompatibleGameWorldProvider(BaseGameWorldProvider):
             raise ProviderResponseError(f"AI 返回 JSON 中缺少 section: {section}")
         return normalize_section_value(section, parsed.get(section), input_payload)
 
-    def _chat(self, messages: list[dict]) -> str:
+    def _chat(self, messages: List[Dict]) -> str:
         endpoint = self._chat_completions_endpoint()
         payload = {
             "model": self.model_name,

@@ -1,5 +1,5 @@
 import copy
-from typing import Any
+from typing import Any, Optional
 
 from .base import BaseGameWorldProvider, clean_text, normalize_game_world_result, normalize_section_value
 
@@ -24,7 +24,7 @@ class MockGameWorldProvider(BaseGameWorldProvider):
         template = self._select_template(input_payload)
         return normalize_game_world_result(template(input_payload), input_payload)
 
-    def regenerate_section(self, current_output: dict, section: str, instruction: str, input_payload: dict | None = None) -> Any:
+    def regenerate_section(self, current_output: dict, section: str, instruction: str, input_payload: Optional[dict] = None) -> Any:
         payload = input_payload or current_output.get("source_input") or {}
         refreshed = self.generate_game_world({**payload, "idea": clean_text(payload.get("idea"), current_output.get("one_sentence_pitch"))})
         section_value = copy.deepcopy(refreshed.get(section if section != "next_steps" else "development_next_steps"))
