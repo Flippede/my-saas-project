@@ -78,6 +78,9 @@ app.add_middleware(
 
 DB_PATH = _read_env("DB_PATH", "x_creator.db")
 FIXED_AMOUNT = Decimal(_read_env_any(["FIXED_AMOUNT", "PAY_AMOUNT"], "49.00"))
+OPENCLAW_INSTALL_PRODUCT_CODE = "openclaw_install_service"
+OPENCLAW_INSTALL_PRODUCT_NAME = "OpenClaw 龙虾安装调试服务"
+OPENCLAW_INSTALL_AMOUNT = Decimal("128.00")
 WECHAT_API_BASE = _read_env_any(["WECHAT_API_BASE", "WECHAT_PAY_API_BASE"], "https://api.mch.weixin.qq.com")
 WECHAT_NOTIFY_URL = _read_env_any(
     ["WECHAT_NOTIFY_URL", "WECHAT_PAY_NOTIFY_URL", "WX_NOTIFY_URL"],
@@ -370,6 +373,23 @@ def init_db() -> None:
     )
     cur.execute(
         """
+        CREATE TABLE IF NOT EXISTS service_orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            product_code TEXT NOT NULL,
+            product_name TEXT NOT NULL,
+            amount TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            out_trade_no TEXT NOT NULL UNIQUE,
+            transaction_id TEXT,
+            paid_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS ai_game_projects (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
@@ -477,13 +497,17 @@ def _build_wechat_authorization(method: str, canonical_url: str, body: str) -> s
     )
 
 
-def _wechat_post_native(out_trade_no: str) -> str:
+def _wechat_post_native(
+    out_trade_no: str,
+    amount: Decimal = FIXED_AMOUNT,
+    description: str = "AI Storyboard X - 30天订阅",
+) -> str:
     url_path = "/v3/pay/transactions/native"
-    amount_obj = {"total": int(FIXED_AMOUNT * 100), "currency": "CNY"}
+    amount_obj = {"total": int(amount * 100), "currency": "CNY"}
     body_dict = {
         "appid": WECHAT_APPID,
         "mchid": WECHAT_MCHID,
-        "description": "AI Storyboard X - 30天订阅",
+        "description": description,
         "out_trade_no": out_trade_no,
         "notify_url": WECHAT_NOTIFY_URL,
         "amount": amount_obj,
@@ -498,7 +522,7 @@ def _wechat_post_native(out_trade_no: str) -> str:
         raise HTTPException(status_code=500, detail="notify_url 必须是公网 HTTPS 地址")
     if not isinstance(body_dict["amount"], dict):
         raise HTTPException(status_code=500, detail="amount 必须是字典对象")
-    expected_total = int(FIXED_AMOUNT * 100)
+    expected_total = int(amount * 100)
     if body_dict["amount"].get("total") != expected_total or body_dict["amount"].get("currency") != "CNY":
         raise HTTPException(
             status_code=500,
@@ -645,6 +669,86 @@ def _activate_vip_for_paid_order(out_trade_no: str, transaction_id: str = "", pa
     return {"ok": True, "message": "paid", "user_id": user_id}
 
 
+def _get_service_order(out_trade_no: str) -> Optional[sqlite3.Row]:
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM service_orders WHERE out_trade_no = ?", (out_trade_no,))
+    row = cur.fetchone()
+    conn.close()
+    return row
+
+
+def _mark_service_order_paid(out_trade_no: str, transaction_id: str = "", paid_at: str = "") -> dict:
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, status, user_id FROM service_orders WHERE out_trade_no = ?", (out_trade_no,))
+    order = cur.fetchone()
+    if not order:
+        conn.close()
+        return {"ok": False, "message": "service_order_not_found"}
+
+    effective_paid_at = paid_at or now_utc().isoformat()
+    if str(order["status"] or "").lower() == "paid":
+        cur.execute(
+            """
+            UPDATE service_orders
+            SET transaction_id = COALESCE(NULLIF(transaction_id, ''), ?),
+                paid_at = COALESCE(NULLIF(paid_at, ''), ?),
+                updated_at = ?
+            WHERE out_trade_no = ?
+            """,
+            (transaction_id, effective_paid_at, now_utc().isoformat(), out_trade_no),
+        )
+        conn.commit()
+        conn.close()
+        return {"ok": True, "message": "already_paid", "user_id": order["user_id"]}
+
+    cur.execute(
+        """
+        UPDATE service_orders
+        SET status = 'paid',
+            transaction_id = ?,
+            paid_at = ?,
+            updated_at = ?
+        WHERE out_trade_no = ?
+        """,
+        (transaction_id, effective_paid_at, now_utc().isoformat(), out_trade_no),
+    )
+    conn.commit()
+    conn.close()
+    print("OpenClaw 服务订单已支付: out_trade_no={0}, transaction_id={1}".format(
+        out_trade_no,
+        transaction_id or "-",
+    ))
+    return {"ok": True, "message": "paid", "user_id": order["user_id"]}
+
+
+def _sync_service_order_from_wechat(out_trade_no: str) -> dict:
+    order = _get_service_order(out_trade_no)
+    if not order:
+        return {"synced": False, "message": "service_order_not_found"}
+    if str(order["status"] or "").lower() == "paid":
+        return {"synced": True, "message": "already_paid"}
+
+    data = _wechat_query_order(out_trade_no)
+    trade_state = data.get("trade_state", "")
+    if trade_state != "SUCCESS":
+        return {"synced": False, "message": trade_state or "not_success"}
+
+    amount_total = data.get("amount", {}).get("total", 0)
+    if Decimal(str(amount_total)) != OPENCLAW_INSTALL_AMOUNT * 100:
+        print("OpenClaw 服务订单查单金额不匹配: out_trade_no={0}, amount_total={1}".format(out_trade_no, amount_total))
+        return {"synced": False, "message": "amount_mismatch"}
+
+    paid_at = parse_iso_time(data.get("success_time", "")).isoformat()
+    result = _mark_service_order_paid(
+        out_trade_no,
+        transaction_id=data.get("transaction_id", ""),
+        paid_at=paid_at,
+    )
+    return {"synced": result.get("ok", False), "message": result.get("message", "paid")}
+
+
 def _sync_order_from_wechat(out_trade_no: str) -> dict:
     conn = get_db_conn()
     cur = conn.cursor()
@@ -773,6 +877,17 @@ class PaymentCreateResponse(BaseModel):
     code_url: str
     amount: str
     status: str
+
+
+class ServiceOrderResponse(BaseModel):
+    order_id: str
+    product_code: str
+    product_name: str
+    amount: str
+    status: str
+    service_status: str
+    code_url: Optional[str] = ""
+    paid_at: Optional[str] = ""
 
 
 class LoginQRCodeResponse(BaseModel):
@@ -1334,6 +1449,22 @@ async def wechat_webhook(request: Request):
     success_time = plain_data.get("success_time", "")
     if not out_trade_no:
         raise HTTPException(status_code=400, detail="回调缺少 out_trade_no")
+
+    service_order = _get_service_order(out_trade_no)
+    if service_order:
+        if Decimal(str(amount_total)) != OPENCLAW_INSTALL_AMOUNT * 100:
+            print("OpenClaw 服务订单回调金额不匹配: out_trade_no={0}, amount_total={1}".format(out_trade_no, amount_total))
+            raise HTTPException(status_code=400, detail="服务订单金额校验失败")
+        paid_at = parse_iso_time(success_time).isoformat()
+        result = _mark_service_order_paid(out_trade_no, transaction_id=transaction_id, paid_at=paid_at)
+        print("OpenClaw 服务订单回调处理结果: out_trade_no={0}, result={1}".format(
+            out_trade_no,
+            result.get("message", ""),
+        ))
+        if not result.get("ok"):
+            raise HTTPException(status_code=404, detail="服务订单不存在")
+        return JSONResponse(status_code=200, content={"code": "SUCCESS", "message": "成功"})
+
     if Decimal(str(amount_total)) != FIXED_AMOUNT * 100:
         print("微信支付回调金额不匹配: out_trade_no={0}, amount_total={1}".format(out_trade_no, amount_total))
         raise HTTPException(status_code=400, detail="订单金额校验失败")
@@ -1392,6 +1523,91 @@ async def payment_status(order_id: str):
         "vip_active": payload["vip_active"],
         "redirect_url": payload["redirect_url"],
     }
+
+
+def _format_openclaw_service_order(row: sqlite3.Row, code_url: str = "") -> dict:
+    status = str(row["status"] or "pending").lower()
+    service_status = "待预约 / 待远程服务" if status == "paid" else "待支付"
+    return {
+        "order_id": row["out_trade_no"],
+        "product_code": row["product_code"],
+        "product_name": row["product_name"],
+        "amount": row["amount"],
+        "status": status,
+        "service_status": service_status,
+        "code_url": code_url,
+        "paid_at": row["paid_at"] or "",
+    }
+
+
+@app.post(
+    "/api/v1/service-orders/openclaw-install/create-payment",
+    response_model=ServiceOrderResponse,
+)
+async def create_openclaw_install_service_payment(token: str = Depends(verify_token_from_header)):
+    try:
+        validate_wechat_create_config()
+    except RuntimeError as exc:
+        print("微信支付配置检查失败: {0}".format(str(exc)))
+        raise HTTPException(status_code=503, detail="微信支付暂未配置，请联系管理员完成商户配置。") from exc
+
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    out_trade_no = make_order_id()
+    now = now_utc().isoformat()
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
+        INSERT INTO service_orders (
+            user_id, product_code, product_name, amount, status,
+            out_trade_no, transaction_id, paid_at, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, 'pending', ?, '', '', ?, ?)
+        """,
+        (
+            user_id,
+            OPENCLAW_INSTALL_PRODUCT_CODE,
+            OPENCLAW_INSTALL_PRODUCT_NAME,
+            f"{OPENCLAW_INSTALL_AMOUNT:.2f}",
+            out_trade_no,
+            now,
+            now,
+        ),
+    )
+    conn.commit()
+    cur.execute("SELECT * FROM service_orders WHERE out_trade_no = ?", (out_trade_no,))
+    row = cur.fetchone()
+    conn.close()
+
+    code_url = _wechat_post_native(
+        out_trade_no,
+        amount=OPENCLAW_INSTALL_AMOUNT,
+        description=OPENCLAW_INSTALL_PRODUCT_NAME,
+    )
+    return _format_openclaw_service_order(row, code_url=code_url)
+
+
+@app.get("/api/v1/service-orders/{order_id}", response_model=ServiceOrderResponse)
+async def get_service_order(order_id: str, token: str = Depends(verify_token_from_header)):
+    user_id = _get_user_id_for_token(token)
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="登录凭证无效，无法识别用户")
+
+    _sync_service_order_from_wechat(order_id)
+    conn = get_db_conn()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT * FROM service_orders WHERE out_trade_no = ? AND user_id = ?",
+        (order_id, user_id),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        raise HTTPException(status_code=404, detail="服务订单不存在")
+    return _format_openclaw_service_order(row)
 
 
 @app.post("/api/v1/game-submissions")
