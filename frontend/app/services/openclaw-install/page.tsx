@@ -19,6 +19,7 @@ import {
 
 import { Button } from "@/components/ui/button"
 import { buildApiUrl, formatAmount, getStoredToken, jsonHeaders } from "@/lib/app-config"
+import { buildLoginUrl } from "@/lib/auth-redirect"
 import { createOpenClawInstallPayment, getServiceOrder, type ServiceOrderResponse } from "@/lib/service-orders"
 
 const productName = "OpenClaw 龙虾安装调试服务"
@@ -183,7 +184,7 @@ export default function OpenClawInstallServicePage() {
   async function handleBuy() {
     const token = getStoredToken()
     if (!token) {
-      router.push("/login?redirect=%2Fservices%2Fopenclaw-install")
+      router.push(buildLoginUrl("/services/openclaw-install"))
       return
     }
 

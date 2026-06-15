@@ -13,6 +13,7 @@ import {
   storeSession,
   USER_ID_KEY,
 } from "@/lib/app-config"
+import { buildLoginUrl } from "@/lib/auth-redirect"
 import { createOrder } from "@/lib/payment"
 
 const USER_INFO_REFRESH_EVENT = AUTH_STATE_CHANGED_EVENT
@@ -164,7 +165,7 @@ export function AppHeader() {
 
     const token = getStoredToken()
     if (!token) {
-      router.push("/login")
+      router.push(buildLoginUrl())
       return
     }
 
@@ -277,7 +278,7 @@ export function AppHeader() {
           </div>
         ) : (
           <button
-            onClick={() => router.push("/login")}
+            onClick={() => router.push(buildLoginUrl())}
             className="h-9 rounded-full border border-white/20 bg-neutral-900/75 px-4 text-sm font-medium text-neutral-100 shadow-lg backdrop-blur transition-colors hover:bg-white/10"
           >
             登录

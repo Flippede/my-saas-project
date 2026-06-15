@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
 import { buildApiUrl, storeSession } from "@/lib/app-config"
+import { getRedirectFromSearch } from "@/lib/auth-redirect"
 
 type LoginQrcodeResponse = {
   scene_id?: string
@@ -32,19 +33,6 @@ async function readApiResponse<T extends { message?: string; detail?: string }>(
   return {
     message: text || `请求失败，HTTP ${response.status}`,
   } as T
-}
-
-function getLoginRedirectTarget() {
-  if (typeof window === "undefined") {
-    return "/?login=success"
-  }
-
-  const redirect = new URLSearchParams(window.location.search).get("redirect") || ""
-  if (redirect.startsWith("/") && !redirect.startsWith("//")) {
-    return redirect
-  }
-
-  return "/?login=success"
 }
 
 export default function LoginPage() {
@@ -112,7 +100,7 @@ export default function LoginPage() {
         if (data.status === "success" && data.token) {
           clearInterval(pollTimer)
           storeSession(data.token, data.user_id)
-          router.push(getLoginRedirectTarget())
+          router.push(getRedirectFromSearch(window.location.search))
         }
       } catch {
         // Ignore transient polling errors and keep waiting.
