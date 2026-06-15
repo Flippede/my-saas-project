@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { QRCodeCanvas } from "qrcode.react"
 import {
@@ -64,12 +63,11 @@ const excludedItems = [
 const processSteps = [
   "登录账号",
   "支付 128 元服务费",
-  "联系客服预约远程时间",
-  "远程连接客户电脑",
-  "安装 OpenClaw",
+  "联系服务人员确认远程时间",
+  "远程协助安装 OpenClaw",
   "配置 DeepSeek API",
-  "测试运行",
-  "简单讲解使用方式",
+  "测试基础运行",
+  "简单说明使用方式",
 ]
 
 const preparationItems = [
@@ -251,8 +249,8 @@ export default function OpenClawInstallServicePage() {
               </div>
               <div className="mt-4 flex flex-wrap gap-2 text-xs text-neutral-300">
                 <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">当前优惠价</span>
-                <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">远程服务排期中</span>
-                <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">名额有限，以预约确认为准</span>
+                <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">远程安装调试</span>
+                <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">DeepSeek API 配置</span>
               </div>
               <p className="mt-4 text-sm leading-7 text-neutral-300">
                 当前服务费为 128 元 / 次，仅包含 OpenClaw 远程安装调试、DeepSeek API 配置、基础运行测试和简单使用说明。DeepSeek API 调用费用由客户自行充值，本服务费不包含模型调用费用。
@@ -265,7 +263,7 @@ export default function OpenClawInstallServicePage() {
               <div className="text-sm text-neutral-400">{productName}</div>
               <div className="mt-3 flex items-end gap-3">
                 <span className="text-neutral-500 line-through">原价 {originalPrice} 元</span>
-                <span className="rounded bg-amber-200 px-2 py-1 text-xs font-semibold text-black">早鸟优惠</span>
+                <span className="rounded bg-amber-200 px-2 py-1 text-xs font-semibold text-black">当前优惠价</span>
               </div>
               <div className="mt-3 text-4xl font-semibold text-white">{salePrice} 元</div>
               <p className="mt-3 text-sm leading-7 text-neutral-300">
@@ -309,13 +307,13 @@ export default function OpenClawInstallServicePage() {
               <div className="mt-5 rounded-lg border border-emerald-300/25 bg-emerald-300/[0.08] p-5">
                 <h2 className="text-xl font-semibold text-emerald-50">支付成功</h2>
                 <p className="mt-3 text-sm leading-7 text-neutral-300">
-                  你已购买 {productName}。请根据页面提示联系客服预约远程安装时间。
+                  你已购买 {productName}。请根据页面提示联系服务人员确认远程安装时间。
                 </p>
                 <div className="mt-4 grid gap-2 text-sm text-neutral-300">
                   <span>订单号：{payment.orderId}</span>
                   <span>支付金额：{formatAmount(payment.amount)} 元</span>
                   <span>服务名称：{productName}</span>
-                  <span>服务状态：{payment.serviceStatus || "待预约 / 待远程服务"}</span>
+                  <span>服务状态：{payment.serviceStatus || "待确认 / 待远程服务"}</span>
                 </div>
                 <p className="mt-4 text-xs leading-6 text-neutral-400">
                   DeepSeek API 调用费用需自行充值，本服务费不包含模型调用费用。
@@ -340,7 +338,7 @@ export default function OpenClawInstallServicePage() {
                 ["交付方式", "远程协助"],
                 ["服务形式", "在线远程安装调试"],
                 ["服务时长", "以基础安装调试完成为准，通常为一次服务"],
-                ["购买后", "支付完成后，请联系页面客服或站内提示方式预约服务。"],
+                ["购买后", "支付完成后，请联系页面客服或站内提示方式确认远程服务时间。"],
               ].map(([label, value]) => (
                 <div key={label} className="rounded-lg border border-white/10 bg-black/25 p-4">
                   <div className="text-sm text-neutral-500">{label}</div>
