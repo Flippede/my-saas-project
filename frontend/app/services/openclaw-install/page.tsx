@@ -214,9 +214,9 @@ export default function OpenClawInstallServicePage() {
       return "正在检查登录状态..."
     }
     if (!loggedIn) {
-      return "登录后锁定优惠价"
+      return "登录后购买安装服务"
     }
-    return createLoading ? "正在创建服务订单..." : "立即锁定 128 元体验价"
+    return createLoading ? "正在创建服务订单..." : "立即购买安装服务"
   }, [checkingLogin, createLoading, loggedIn])
 
   return (
@@ -227,9 +227,6 @@ export default function OpenClawInstallServicePage() {
 
         <section className="relative mx-auto grid max-w-7xl gap-8 px-4 pb-16 pt-24 lg:grid-cols-[1fr_420px] lg:px-6">
           <div>
-            <Link href="/" className="mb-8 inline-flex text-sm text-neutral-400 transition hover:text-white">
-              返回首页
-            </Link>
             <p className="inline-flex items-center gap-2 rounded-md border border-cyan-200/25 bg-cyan-200/10 px-3 py-2 text-sm text-cyan-100">
               <Wrench className="h-4 w-4" />
               远程安装调试服务
@@ -245,20 +242,20 @@ export default function OpenClawInstallServicePage() {
                   <div className="mt-1 text-2xl text-neutral-500 line-through">{originalPrice} 元</div>
                 </div>
                 <div>
-                  <div className="text-sm text-amber-100">限时体验价</div>
+                  <div className="text-sm text-amber-100">当前优惠价</div>
                   <div className="mt-1 text-5xl font-semibold text-amber-100">{salePrice} 元 <span className="text-lg font-normal">/ 次</span></div>
                 </div>
                 <div className="rounded-md border border-emerald-300/25 bg-emerald-300/[0.1] px-3 py-2 text-sm text-emerald-100">
-                  试运营期间立省 {savedPrice} 元
+                  立省 {savedPrice} 元
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-2 text-xs text-neutral-300">
-                <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">当前为试运营价格</span>
+                <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">当前优惠价</span>
                 <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">远程服务排期中</span>
                 <span className="rounded border border-white/10 bg-black/25 px-2.5 py-1">名额有限，以预约确认为准</span>
               </div>
               <p className="mt-4 text-sm leading-7 text-neutral-300">
-                当前 128 元为试运营体验价，后续可能根据服务时长、安装复杂度和排期情况调整价格。
+                当前服务费为 128 元 / 次，仅包含 OpenClaw 远程安装调试、DeepSeek API 配置、基础运行测试和简单使用说明。DeepSeek API 调用费用由客户自行充值，本服务费不包含模型调用费用。
               </p>
             </div>
           </div>
@@ -388,8 +385,8 @@ export default function OpenClawInstallServicePage() {
             <h2 className="text-3xl font-semibold">{productName}</h2>
             <div className="mt-5 flex flex-col items-center justify-center gap-2">
               <div className="text-neutral-500 line-through">原价 {originalPrice} 元</div>
-              <div className="text-4xl font-semibold text-amber-100">限时体验价 {salePrice} 元</div>
-              <div className="text-sm text-emerald-100">试运营期间立省 {savedPrice} 元</div>
+              <div className="text-4xl font-semibold text-amber-100">当前优惠价 {salePrice} 元</div>
+              <div className="text-sm text-emerald-100">立省 {savedPrice} 元</div>
             </div>
             <p className="mx-auto mt-5 max-w-2xl text-sm leading-7 text-neutral-300">
               包含远程安装、DeepSeek API 配置、基础运行测试和简单使用说明。
