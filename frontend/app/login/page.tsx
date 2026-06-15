@@ -34,6 +34,19 @@ async function readApiResponse<T extends { message?: string; detail?: string }>(
   } as T
 }
 
+function getLoginRedirectTarget() {
+  if (typeof window === "undefined") {
+    return "/?login=success"
+  }
+
+  const redirect = new URLSearchParams(window.location.search).get("redirect") || ""
+  if (redirect.startsWith("/") && !redirect.startsWith("//")) {
+    return redirect
+  }
+
+  return "/?login=success"
+}
+
 export default function LoginPage() {
   const router = useRouter()
   const [qrcodeUrl, setQrcodeUrl] = useState("")
@@ -99,7 +112,7 @@ export default function LoginPage() {
         if (data.status === "success" && data.token) {
           clearInterval(pollTimer)
           storeSession(data.token, data.user_id)
-          router.push("/?login=success")
+          router.push(getLoginRedirectTarget())
         }
       } catch {
         // Ignore transient polling errors and keep waiting.

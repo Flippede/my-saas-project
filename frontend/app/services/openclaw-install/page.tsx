@@ -183,7 +183,7 @@ export default function OpenClawInstallServicePage() {
   async function handleBuy() {
     const token = getStoredToken()
     if (!token) {
-      router.push("/login")
+      router.push("/login?redirect=%2Fservices%2Fopenclaw-install")
       return
     }
 
