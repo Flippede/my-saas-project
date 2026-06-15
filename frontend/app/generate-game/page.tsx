@@ -3,7 +3,7 @@
 import type { FormEvent } from "react"
 import { useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, ArrowRight, Loader2, WandSparkles } from "lucide-react"
+import { ArrowLeft, ArrowRight, Clapperboard, Loader2, WandSparkles } from "lucide-react"
 
 import { AIGameWorldResult } from "@/components/ai-game-world-result"
 import { Button } from "@/components/ui/button"
@@ -127,6 +127,14 @@ export default function GenerateGamePage() {
                   {error}
                 </div>
               ) : null}
+
+              <div className="mt-5 rounded-lg border border-cyan-200/20 bg-cyan-200/[0.06] p-4 text-sm leading-7 text-cyan-50">
+                <Link href="/cases" className="inline-flex items-center gap-2 transition hover:text-white">
+                  <Clapperboard className="h-4 w-4" />
+                  不知道怎么写想法？先看 3 个官方 Demo 案例
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
 
               <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Button

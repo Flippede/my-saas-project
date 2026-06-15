@@ -1,5 +1,6 @@
 import Link from "next/link"
 import {
+  ArrowRight,
   Box,
   Boxes,
   CheckCircle2,
@@ -41,27 +42,30 @@ const capabilities = [
 
 const demos = [
   {
+    slug: "dark-myth-action",
     title: "国风暗黑动作游戏",
     subtitle: "Oriental Dark Action",
-    description: "东方玄幻、雷电剑客、雨夜古寺、Boss 战、横版动作。",
+    description: "查看 AI 生成的国风暗黑世界观、斩妖主角、Boss、场景、UI、视频分镜和资产 Prompt。",
     tags: ["横版动作", "Boss 战", "技能 UI"],
     gradient: "from-emerald-400/22 via-cyan-400/10 to-amber-300/18",
     accent: "text-emerald-200",
     hud: "HP 82% · QTE READY",
   },
   {
+    slug: "cyberpunk-open-world",
     title: "赛博朋克开放世界",
     subtitle: "Neon Open World",
-    description: "霓虹城市、机械义体、飞行摩托、枪战、第三人称任务 UI。",
+    description: "查看霓虹都市、飞行摩托、城市断层地图、任务 UI 和宣传片分镜样板。",
     tags: ["开放世界", "任务系统", "载具追逐"],
     gradient: "from-cyan-400/22 via-fuchsia-400/14 to-blue-400/16",
     accent: "text-cyan-200",
     hud: "MISSION SYNC · 03:21",
   },
   {
+    slug: "pixel-rpg-adventure",
     title: "像素 RPG 冒险游戏",
     subtitle: "Pixel RPG Adventure",
-    description: "像素村庄、地牢探索、NPC 对话、道具栏、战斗动画。",
+    description: "查看温暖像素 RPG 如何拆解送信叙事、角色 sprite、场景、UI 和 Pitch 大纲。",
     tags: ["像素风", "地牢", "Sprite"],
     gradient: "from-amber-300/22 via-rose-400/10 to-lime-300/16",
     accent: "text-amber-200",
@@ -186,6 +190,17 @@ export default function HomePage() {
                   variant="outline"
                   className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
                 >
+                  <Link href="/cases">
+                    查看官方 Demo 案例
+                    <Clapperboard className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  size="lg"
+                  variant="outline"
+                  className="rounded-md border-white/20 bg-white/5 text-white hover:bg-white/10 hover:text-white"
+                >
                   <Link href="/submit">
                     提交定制制作需求
                     <Send className="h-4 w-4" />
@@ -244,7 +259,10 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl px-4 lg:px-6">
             <div className="mb-12 max-w-3xl">
               <p className="text-sm uppercase tracking-[0.22em] text-fuchsia-200">Demo Cases</p>
-              <h2 className="mt-3 text-3xl font-semibold md:text-5xl">先用 3 个方向验证传播和付费</h2>
+              <h2 className="mt-3 text-3xl font-semibold md:text-5xl">查看 AI 生成的游戏世界方案样板</h2>
+              <p className="mt-5 text-sm leading-7 text-neutral-400">
+                查看角色、Boss、场景、UI、视频分镜和资产 Prompt 如何从一句想法拆解出来。
+              </p>
             </div>
             <div className="grid gap-5 lg:grid-cols-3">
               {demos.map((demo) => (
@@ -278,9 +296,28 @@ export default function HomePage() {
                         </span>
                       ))}
                     </div>
+                    <Button asChild className="mt-6 w-full rounded-md bg-white text-black hover:bg-neutral-200">
+                      <Link href={`/cases/${demo.slug}`}>
+                        查看案例
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
                   </div>
                 </article>
               ))}
+            </div>
+            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+              <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
+                <Link href="/cases">查看全部官方 Demo 案例</Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="rounded-md border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              >
+                <Link href="/generate-game">免费生成我的游戏世界方案</Link>
+              </Button>
             </div>
           </div>
         </section>

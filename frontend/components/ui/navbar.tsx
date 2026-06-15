@@ -64,7 +64,7 @@ export function Navbar() {
 
         <nav className="hidden items-center space-x-4 text-sm sm:flex sm:space-x-6">
           <AnimatedNavLink href="/#solutions">能力</AnimatedNavLink>
-          <AnimatedNavLink href="/#demos">Demo</AnimatedNavLink>
+          <AnimatedNavLink href="/cases">案例</AnimatedNavLink>
           <AnimatedNavLink href="/#workflow">流程</AnimatedNavLink>
           <AnimatedNavLink href="/#pricing">价格</AnimatedNavLink>
         </nav>
@@ -99,7 +99,7 @@ export function Navbar() {
         <nav className="flex w-full flex-col items-center space-y-4 text-base">
           {[
             { href: "/#solutions", label: "能力" },
-            { href: "/#demos", label: "Demo" },
+            { href: "/cases", label: "案例" },
             { href: "/#workflow", label: "流程" },
             { href: "/#pricing", label: "价格" },
           ].map((item) => (
