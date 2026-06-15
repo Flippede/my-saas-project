@@ -296,12 +296,21 @@ export default function HomePage() {
                         </span>
                       ))}
                     </div>
-                    <Button asChild className="mt-6 w-full rounded-md bg-white text-black hover:bg-neutral-200">
-                      <Link href={`/cases/${demo.slug}`}>
-                        查看案例
-                        <ArrowRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                      <Button asChild className="rounded-md bg-white text-black hover:bg-neutral-200">
+                        <Link href={`/cases/${demo.slug}`}>
+                          查看案例
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      <Button
+                        asChild
+                        variant="outline"
+                        className="rounded-md border-white/15 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                      >
+                        <Link href={`/generate-game?case=${demo.slug}`}>生成类似方案</Link>
+                      </Button>
+                    </div>
                   </div>
                 </article>
               ))}

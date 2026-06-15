@@ -576,3 +576,43 @@ export const demoCases: DemoCase[] = [
 export function getDemoCase(slug: string) {
   return demoCases.find((item) => item.slug === slug)
 }
+
+export type DemoCasePrefill = {
+  idea: string
+  gameType: string
+  artStyle: string
+  targetPlatform: string
+}
+
+const demoCasePrefills: Record<string, DemoCasePrefill> = {
+  "dark-myth-action": {
+    idea: "我想做一个国风暗黑动作游戏，主角是被流放的斩妖人，在破败古城和妖魔遗迹中战斗，核心体验是高速近战、闪避反击和 Boss 压迫感。",
+    gameType: "动作角色扮演",
+    artStyle: "国风暗黑",
+    targetPlatform: "PC / Steam",
+  },
+  "cyberpunk-open-world": {
+    idea: "我想做一个赛博朋克开放世界游戏，玩家扮演被企业追捕的义体黑客，在霓虹都市中接任务、潜入、追车和破解城市系统。",
+    gameType: "开放世界冒险",
+    artStyle: "赛博朋克",
+    targetPlatform: "PC / Steam",
+  },
+  "pixel-rpg-adventure": {
+    idea: "我想做一个像素 RPG 冒险游戏，主角从边境小村出发，探索地牢、结识 NPC、收集道具并揭开古代遗迹秘密。",
+    gameType: "像素 RPG",
+    artStyle: "像素复古",
+    targetPlatform: "PC / Steam",
+  },
+}
+
+export function getDemoCasePrefill(slug: string) {
+  const demo = getDemoCase(slug)
+  const prefill = demoCasePrefills[slug]
+  if (!demo || !prefill) {
+    return null
+  }
+  return {
+    demo,
+    prefill,
+  }
+}

@@ -105,8 +105,8 @@ export default function CaseDetailPage({ params }: { params: { slug: string } })
             </div>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
-                <Link href="/generate-game">
-                  生成类似方案
+                <Link href={`/generate-game?case=${demo.slug}`}>
+                  基于这个案例生成我的版本
                   <Sparkles className="h-4 w-4" />
                 </Link>
               </Button>
@@ -245,7 +245,7 @@ export default function CaseDetailPage({ params }: { params: { slug: string } })
             </p>
             <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg" className="rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
-                <Link href="/generate-game">免费生成我的游戏世界方案</Link>
+                <Link href={`/generate-game?case=${demo.slug}`}>基于这个案例生成我的版本</Link>
               </Button>
               <Button
                 asChild

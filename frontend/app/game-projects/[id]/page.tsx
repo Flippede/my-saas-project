@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, Loader2, RefreshCw } from "lucide-react"
+import { ArrowLeft, Loader2, RefreshCw, Send } from "lucide-react"
 
 import { AIGameAssetPipeline } from "@/components/ai-game-asset-pipeline"
 import { AIGameWorldResult } from "@/components/ai-game-world-result"
@@ -166,6 +166,22 @@ export default function GameProjectDetailPage({ params }: { params: { id: string
                     <span className="rounded border border-white/10 bg-white/[0.05] px-3 py-2">画风：{project.art_style || "未填写"}</span>
                     <span className="rounded border border-white/10 bg-white/[0.05] px-3 py-2">创建：{formatDate(project.created_at)}</span>
                   </div>
+                </div>
+              </section>
+              <section className="mb-6 rounded-lg border border-cyan-200/20 bg-cyan-200/[0.07] p-5">
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                  <div>
+                    <h2 className="text-xl font-semibold">需要把这个方案做成宣传片、素材包或可交互 Demo？</h2>
+                    <p className="mt-2 text-sm leading-7 text-neutral-300">
+                      可以先继续完善世界观和视觉资产任务，再提交定制制作需求进入范围评估。
+                    </p>
+                  </div>
+                  <Button asChild className="shrink-0 rounded-md bg-cyan-200 text-black hover:bg-cyan-100">
+                    <Link href={`/submit?projectId=${project.id}`}>
+                      <Send className="h-4 w-4" />
+                      提交定制制作需求
+                    </Link>
+                  </Button>
                 </div>
               </section>
               <AIGameAssetPipeline projectId={project.id} />
